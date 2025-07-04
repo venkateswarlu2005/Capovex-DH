@@ -60,7 +60,14 @@ export const linkService = {
 			recipients?: ShareLinkRecipient[];
 		},
 	) {
-		const { alias, isPublic = false, password, expirationTime, visitorFields = [] } = options;
+		const {
+			alias,
+			isPublic = false,
+			password,
+			expirationTime,
+			visitorFields = [],
+			recipients = [],
+		} = options;
 		return prisma.$transaction(async (tx) => {
 			// Ensure the document exists and is owned by the user
 			const doc = await tx.document.findFirst({
@@ -100,11 +107,28 @@ export const linkService = {
 						visitorFields,
 					},
 				});
-				// Return with fresh URL (in case HOST differs by env)
-				return { ...created, linkUrl: buildLinkUrl(slug) };
+
+				const linkUrl = buildDocumentLinkUrl(slug);
+				const senderName = await brandingService.getDisplayName(userId);
+				// Send share-link e-mails (fire-and-forget – don’t block transaction)
+				if (recipients.length) {
+					console.warn('[linkService] Sending share link emails to:', recipients);
+					// Ensure unique recipients by email
+					notificationService
+						.sendShareLink({
+							recipients,
+							url: linkUrl,
+							fileName: doc.fileName,
+							senderName,
+						})
+						.catch((e) => logWarn('[linkService] sendShareLink failed:', e));
+				}
+
+				// Return the created link with a fresh URL (in case HOST differs by env)
+				return { ...created, linkUrl };
 			} catch (err) {
+				// Handle unique constraint violation on (documentId, alias)
 				if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-					// Collision on (documentId, alias)
 					throw new ServiceError('LINK_ALIAS_CONFLICT', 409);
 				}
 				throw err;

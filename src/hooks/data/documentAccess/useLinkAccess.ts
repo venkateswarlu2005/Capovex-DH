@@ -69,8 +69,8 @@ const useLinkAccess = (
 			openModal({
 				type: 'documentAccess',
 				dialogProps: {
-					disableEscapeKeyDown: isPasswordProtected,
-					disableBackdropClick: isPasswordProtected,
+					disableEscapeKeyDown: true,
+					disableBackdropClick: true,
 				},
 				contentProps: {
 					linkId,

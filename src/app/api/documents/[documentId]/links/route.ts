@@ -4,7 +4,7 @@ import { createErrorResponse, linkService } from '@/services';
 import { authService } from '@/services/auth/authService';
 
 import { buildDocumentLinkUrl } from '@/shared/utils';
-import { DocumentLinkPayloadSchema } from '@/shared/validation/documentLinkSchemas';
+import { DocumentLinkCreateSchema } from '@/shared/validation/documentLinkSchemas';
 
 /**
  * GET /api/documents/[documentId]/links
@@ -14,7 +14,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ documentI
 	try {
 		const userId = await authService.authenticate();
 		const { documentId } = await props.params;
+
 		const links = await linkService.getDocumentLinks(userId, documentId);
+
 		if (links === null) {
 			return createErrorResponse('Document not found or access denied.', 404);
 		}
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ document
 	const params = await props.params;
 	try {
 		const userId = await authService.authenticate();
-		const body = DocumentLinkPayloadSchema.parse(await req.json());
+		const body = DocumentLinkCreateSchema.parse(await req.json());
 
 		// Attempt creation
 		try {

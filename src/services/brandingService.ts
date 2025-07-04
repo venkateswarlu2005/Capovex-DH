@@ -70,6 +70,18 @@ export const brandingService = {
 	},
 
 	/**
+	 * Returns the user’s public‐facing display name or `null`
+	 * if the user chose not to expose personal info.
+	 * @param userId - The user's unique identifier.
+	 * @returns The user's display name if available, otherwise `null`.
+	 */
+	async getDisplayName(userId: string): Promise<string | null> {
+		const accountSettings = await brandingService.getAccountSettings(userId);
+		return accountSettings.showPersonalInfo && accountSettings.displayName?.trim()
+			? accountSettings.displayName.trim()
+			: null;
+	},
+	/**
 	 * Updates the account settings for a user, including scalar fields and optional logo file upload.
 	 *
 	 * @param userId - The user's unique identifier.
