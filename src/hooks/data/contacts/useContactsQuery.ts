@@ -6,7 +6,7 @@ import { queryKeys } from '@/shared/queryKeys';
 
 export default function useContactsQuery() {
 	const fetchContacts = async (): Promise<Contact[]> => {
-		const response = await axios.get('/api/contacts');
+		const response = await axios.get<{ data: Contact[] }>('/api/contacts');
 		return response.data.data;
 	};
 

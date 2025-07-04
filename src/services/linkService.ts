@@ -1,12 +1,20 @@
 import bcryptjs from 'bcryptjs';
 import { randomUUID } from 'crypto';
 
+import { logWarn } from '@/lib/logger';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
-import { buildLinkUrl } from '@/shared/utils';
+import {
+	brandingService,
+	notificationService,
+	ServiceError,
+	storageService,
+	systemSettingService,
+} from '@/services';
 
-import { ServiceError, storageService, systemSettingService } from '@/services';
+import { ShareLinkRecipient } from '@/shared/models';
+import { buildDocumentLinkUrl } from '@/shared/utils';
 
 export const linkService = {
 	/**
@@ -28,9 +36,15 @@ export const linkService = {
 	/**
 	 * Creates a new link for the specified document if the user owns it.
 	 *
-	 * @param userId - The unique identifier of the user.
-	 * @param documentId - The unique identifier of the document.
-	 * @param options - Options for link creation, including alias, public status, password, expiration, and visitor fields.
+	 * @param userId      - The unique identifier of the user creating the link.
+	 * @param documentId  - The unique identifier of the document to link.
+	 * @param options     - Options for link creation, including:
+	 *   - alias: Optional custom alias for the link.
+	 *   - isPublic: Whether the link is public (default: false).
+	 *   - password: Optional password for link protection.
+	 *   - expirationTime: Optional ISO string for link expiration.
+	 *   - visitorFields: Array of visitor field keys to collect.
+	 *   - recipients: Array of email addresses to notify.
 	 * @returns The created document link with a generated URL.
 	 * @throws ServiceError if the document is not found, expiration is in the past, or alias conflicts.
 	 */
@@ -43,18 +57,20 @@ export const linkService = {
 			password?: string;
 			expirationTime?: string;
 			visitorFields?: string[];
+			recipients?: ShareLinkRecipient[];
 		},
 	) {
 		const { alias, isPublic = false, password, expirationTime, visitorFields = [] } = options;
 		return prisma.$transaction(async (tx) => {
-			// Check doc ownership
+			// Ensure the document exists and is owned by the user
 			const doc = await tx.document.findFirst({
 				where: { documentId, userId },
-				select: { documentId: true },
+				select: { documentId: true, fileName: true },
 			});
+
 			if (!doc) throw new ServiceError('DOCUMENT_NOT_FOUND', 404);
 
-			// Validate expiration time
+			// Validate expiration time if provided
 			if (expirationTime && new Date(expirationTime) < new Date()) {
 				throw new ServiceError('EXPIRATION_PAST', 400);
 			}
@@ -62,11 +78,12 @@ export const linkService = {
 			if (expirationTime) {
 				finalExpiration = new Date(expirationTime);
 			} else {
+				// Use default TTL from system settings if not provided
 				const ttl = (await systemSettingService.getSystemSettings()).defaultTtlSeconds;
 				finalExpiration = new Date(Date.now() + ttl * 1_000);
 			}
 
-			// Generate link details
+			// Generate unique link ID and hash password if provided
 			const slug = randomUUID(); // <- documentLinkId
 			const hashedPassword = password ? await bcryptjs.hash(password, 10) : null;
 
@@ -209,9 +226,9 @@ export const linkService = {
 	/**
 	 * Retrieves all visitors who accessed a specific link under a document, ensuring ownership.
 	 *
-	 * @param userId - The unique identifier of the user.
+	 * @param userId     - The unique identifier of the user.
 	 * @param documentId - The unique identifier of the document.
-	 * @param linkId - The unique identifier of the document link.
+	 * @param linkId     - The unique identifier of the document link.
 	 * @returns An array of visitor records, or null if the link is not found or not owned by the user.
 	 */
 	async getDocumentLinkVisitors(userId: string, documentId: string, linkId: string) {
@@ -221,7 +238,7 @@ export const linkService = {
 		});
 		if (!link) return null; // link not found or no access
 
-		// Query link visitors
+		// Query link visitors, ordered by most recent visit
 		return prisma.documentLinkVisitor.findMany({
 			where: { documentLinkId: linkId },
 			orderBy: { visitedAt: 'desc' },
@@ -308,5 +325,64 @@ export const linkService = {
 		}
 
 		return baseMeta;
+	},
+
+	/**
+	 * Retrieves a user's contacts based on unique visitor e-mails across all their links.
+	 * Each contact includes the most recent name, last viewed link, last activity, and total visits.
+	 *
+	 * @param userId - The unique identifier of the user.
+	 * @returns An array of contact objects with name, email, last viewed link, last activity, and total visits.
+	 */
+	async getUserContacts(userId: string) {
+		// Get all link IDs created by the user
+		const links = await prisma.documentLink.findMany({
+			where: { createdByUserId: userId },
+			select: { documentLinkId: true },
+		});
+		if (!links.length) return [];
+
+		const linkIds = links.map((l) => l.documentLinkId);
+
+		// Group visitors by email, get visit count and last activity
+		const visitors = await prisma.documentLinkVisitor.groupBy({
+			by: ['email'],
+			where: { documentLinkId: { in: linkIds } },
+			_count: { email: true },
+			_max: { updatedAt: true },
+		});
+
+		// For each unique email, fetch the most recent name and last viewed link
+		const details = await Promise.all(
+			visitors.map(async (v) => {
+				const last = await prisma.documentLinkVisitor.findFirst({
+					where: {
+						email: v.email,
+						documentLinkId: { in: linkIds },
+						OR: [{ firstName: { not: '' } }, { lastName: { not: '' } }],
+					},
+					orderBy: { updatedAt: 'desc' },
+					include: { documentLink: true },
+				});
+				if (!last) return null;
+
+				const first = last.firstName?.trim() || '';
+				const lastName = last.lastName?.trim() || '';
+				const name = first || lastName ? `${first} ${lastName}`.trim() : null;
+
+				return {
+					id: last.id,
+					name,
+					email: v.email,
+					lastViewedLink:
+						last.documentLink?.alias || buildDocumentLinkUrl(last.documentLink?.documentLinkId),
+					lastActivity: last.updatedAt,
+					totalVisits: v._count.email,
+				};
+			}),
+		);
+
+		// Filter out contacts without both email and name
+		return details.filter((c) => c && c.email && c.name);
 	},
 };
