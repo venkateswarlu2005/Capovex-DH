@@ -1,16 +1,16 @@
 import React from 'react';
 
-import { DialogProps } from '@mui/material';
+import { ModalDialogProps } from './ModalProvider';
 
 import DocumentAccessModal from '@/app/documentAccess/[linkId]/components/DocumentAccessModal';
 import VisitorLogModal from '@/app/documents/[documentId]/components/VisitorLogModal';
+import FileViewerModal from '@/app/documents/components/FileViewerModal';
 import LinkCopyModal from '@/app/documents/components/LinkCopyModal';
 import LinkCreateModal from '@/app/documents/components/LinkCreateModal';
 import PasswordChangeModal from '@/app/profile/components/PasswordChangeModal';
 import DeleteConfirmModal from '@/components/modals/DeleteConfirmModal';
 import InviteModal from '@/components/modals/InviteModal';
 import UploadFileModal from '@/components/modals/UploadFileModal';
-import { ModalDialogProps } from './ModalProvider';
 
 /**
  * A union of valid modal types in your app.
@@ -23,6 +23,7 @@ export type ModalType =
 	| 'linkCopy'
 	| 'passwordChange'
 	| 'visitorLog'
+	| 'fileViewer'
 	| 'documentAccess';
 
 /**
@@ -82,5 +83,9 @@ export const MODAL_REGISTRY: Record<ModalType, ModalRegistryEntry> = {
 	documentAccess: {
 		component: DocumentAccessModal,
 		defaultDialogProps: { maxWidth: 'sm', fullWidth: true },
+	},
+	fileViewer: {
+		component: FileViewerModal,
+		defaultDialogProps: { maxWidth: 'md', fullWidth: true },
 	},
 };
