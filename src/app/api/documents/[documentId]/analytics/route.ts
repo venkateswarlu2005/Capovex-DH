@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ documentI
 		// Ownership guard
 		await documentService.verifyOwnership(userId, documentId);
 
-		const data = await analyticsService.getAnalyticsForDocument(documentId, periodParam);
+		const data = await analyticsService.getDocumentAnalytics(documentId, periodParam);
 		return NextResponse.json(data, { status: 200 });
 	} catch (error) {
 		return createErrorResponse('Server error while fetching analytics.', 500, error);

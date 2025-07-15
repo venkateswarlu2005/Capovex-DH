@@ -27,8 +27,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ documentI
 			email: visitor.email,
 			lastActivity: visitor.updatedAt,
 			downloads: 0,
-			duration: 0,
-			completion: 0,
+			views: 0,
 		}));
 
 		return NextResponse.json({ visitors }, { status: 200 });

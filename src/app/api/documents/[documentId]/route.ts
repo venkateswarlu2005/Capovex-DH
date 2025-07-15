@@ -13,23 +13,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ documentI
 	try {
 		const userId = await authService.authenticate();
 		const { documentId } = await props.params;
+
 		const doc = await documentService.getDocumentById(userId, documentId);
+
 		if (!doc) {
 			return createErrorResponse('Document not found or access denied.', 404);
 		}
 
-		const responsePayload = {
-			...doc,
-			uploader: {
-				name: `${doc.user.firstName} ${doc.user.lastName}`,
-				avatar: null,
-			},
-			links: 0,
-			viewers: 0,
-			views: 0,
-		};
-
-		return NextResponse.json({ document: responsePayload }, { status: 200 });
+		return NextResponse.json({ document: doc }, { status: 200 });
 	} catch (error) {
 		return createErrorResponse('Server error while fetching document.', 500, error);
 	}

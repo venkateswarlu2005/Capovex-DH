@@ -7,45 +7,15 @@ import { buildDocumentLinkUrl } from '@/shared/utils';
 
 /**
  * GET /api/documents
- * Returns all documents for the authenticated user.
+ * Returns a list of documents for the authenticated user.
+ * Each document includes metadata and quick stats.
  */
 export async function GET(req: NextRequest) {
 	try {
 		const userId = await authService.authenticate();
 		const documents = await documentService.getUserDocuments(userId);
 
-		const result = documents.map((doc) => {
-			const linkCount = doc.documentLinks.length;
-			const visitorCount = doc.documentLinks.reduce((acc, l) => acc + l.visitors.length, 0);
-			const totalViews = 0; // placeholder
-
-			const createdLinks = doc.documentLinks.map((link) => ({
-				linkId: link.documentLinkId,
-				createdLink: buildDocumentLinkUrl(link.documentLinkId),
-				lastViewed: link.updatedAt,
-				linkViews: 0,
-			}));
-
-			return {
-				documentId: doc.documentId,
-				fileName: doc.fileName,
-				filePath: doc.filePath,
-				fileType: doc.fileType,
-				size: doc.size,
-				createdAt: doc.createdAt.toISOString(),
-				updatedAt: doc.updatedAt.toISOString(),
-				uploader: {
-					name: `${doc.user.firstName} ${doc.user.lastName}`,
-					avatar: null,
-				},
-				links: linkCount,
-				viewers: visitorCount,
-				views: totalViews,
-				createdLinks,
-			};
-		});
-
-		return NextResponse.json({ documents: result }, { status: 200 });
+		return NextResponse.json({ documents }, { status: 200 });
 	} catch (error) {
 		return createErrorResponse('Server error while fetching documents', 500, error);
 	}
