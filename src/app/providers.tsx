@@ -12,7 +12,7 @@ import { ModalProvider } from '@/providers/modal/ModalProvider';
 import QueryProvider from '@/providers/query/QueryProvider';
 import { ToastProvider } from '@/providers/toast/ToastProvider';
 
-import globalTheme from '@/theme/globalTheme';
+import mainTheme from '@/theme/mainTheme';
 import { LoadingSpinner } from '@/components';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -30,7 +30,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<SessionProvider>
 			<AppRouterCacheProvider>
-				<ThemeProvider theme={globalTheme}>
+				<ThemeProvider theme={mainTheme}>
 					<CssBaseline />
 					<ToastProvider>
 						<LocalizationProvider dateAdapter={AdapterDayjs}>

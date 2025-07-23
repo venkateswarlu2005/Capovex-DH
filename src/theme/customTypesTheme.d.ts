@@ -1,33 +1,8 @@
 import '@mui/material/styles';
 
 declare module '@mui/material' {
-	interface Palette {
-		border: {
-			light: string;
-			dark: string;
-		};
-	}
-
 	interface SimplePaletteColorOptions {
 		text?: string;
-	}
-
-	interface PaletteOptions {
-		border?: {
-			light: string;
-			dark: string;
-		};
-	}
-
-	interface ThemeOptions {
-		shape?: {
-			borderRadius: number;
-			borderThick?: number;
-			boxShadow?: string;
-		};
-		customShadows?: {
-			menu?: string;
-		};
 	}
 }
 
@@ -35,25 +10,42 @@ declare module '@mui/material/styles' {
 	interface TypeBackground {
 		content: string;
 		alt: string;
-		brand: string;
+		primary: string;
 		fill: string;
 		error: string;
-	}
-
-	interface Theme {
-		customShadows: {
-			menu: string;
-		};
+		secondary: string; // light-grey / blue tint
+		secondaryButton: string; // legacy neutral button BG
 	}
 
 	// Extend the Variant type
 	interface TypographyVariants {
+		allVariants?: React.CSSProperties;
 		subtitle3: React.CSSProperties;
 	}
 
 	// Extend the Variant type for theme options
 	interface TypographyVariantsOptions {
+		allVariants?: React.CSSProperties;
 		subtitle3?: React.CSSProperties;
+	}
+
+	interface TypeText {
+		notes: string;
+		brand: string;
+		error: string;
+	}
+
+	interface Theme {
+		border: {
+			light: string;
+			dark: string;
+		};
+	}
+	interface ThemeOptions {
+		border?: {
+			light: string;
+			dark: string;
+		};
 	}
 }
 
