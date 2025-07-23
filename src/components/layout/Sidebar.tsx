@@ -76,8 +76,6 @@ export default function Sidebar() {
 						pt: { xs: 4, sm: 8, md: 16 },
 						pb: { xs: 2, sm: 4, md: 10 },
 						px: { xs: 2, sm: 4, md: 10 },
-						borderRight: 1,
-						borderColor: 'border.light',
 					}}>
 					{/* Top Section */}
 					<Box
