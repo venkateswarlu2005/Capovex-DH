@@ -33,5 +33,5 @@ export { default as useProfileQuery } from './profile/useProfileQuery';
 export { default as useUpdateNameMutation } from './profile/useUpdateNameMutation';
 export { default as useUpdatePasswordMutation } from './profile/useUpdatePasswordMutation';
 
-export { default as useAccountSettingsQuery } from './settings/useAccountSettingsQuery';
-export { default as useUpdateAccountSettingsMutation } from './settings/useUpdateAccountSettingsMutation';
+export { default as useBrandingSettingsQuery } from './settings/useBrandingSettingsQuery';
+export { default as useUpdateBrandingSettingsMutation } from './settings/useUpdateBrandingSettingsMutation';

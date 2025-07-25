@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { brandingService, createErrorResponse } from '@/services';
 import { authService } from '@/services/auth/authService';
 
-import { UpdateAccountSettingSchema } from '@/shared/validation/settingSchemas';
+import { UpdateBrandingSettingSchema } from '@/shared/validation/settingSchemas';
 
 /**
  * Handles GET requests to /api/settings/branding.
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 	try {
 		const userId = await authService.authenticate();
 
-		const setting = await brandingService.getAccountSettings(userId);
+		const setting = await brandingService.getBrandingSettings(userId);
 		const signedLogo = await brandingService.getSignedLogoUrl(setting.logoUrl);
 
 		return NextResponse.json(
@@ -57,9 +57,9 @@ export async function PATCH(req: NextRequest) {
 		const updateInput = await brandingService.buildUpdateInput(formData);
 
 		const { logoFile, ...scalarFields } = updateInput;
-		UpdateAccountSettingSchema.parse(scalarFields);
+		UpdateBrandingSettingSchema.parse(scalarFields);
 
-		const updated = await brandingService.updateAccountSettings(userId, updateInput);
+		const updated = await brandingService.updateBrandingSettings(userId, updateInput);
 		const signedLogo = await brandingService.getSignedLogoUrl(updated.logoUrl);
 
 		return NextResponse.json(

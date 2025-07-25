@@ -59,7 +59,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   documents           Document[]
   documentLinks       DocumentLink[]
-  accountSetting      AccountSetting?
+  brandingSetting     BrandingSetting?
 
   @@index([email])
 }
@@ -181,19 +181,35 @@ enum AnalyticsEventType {
 /**
  * ---------------------------  Branding & Layout settings  ---------------------------
  */
-model AccountSetting {
-  userId           String   @id
+model BrandingSetting {
+  userId           String       @id
   logoUrl          String? // Supabase path; e.g. "assets/{userId}/logo/12345.png"
   displayName      String? // Optional “John Doe”
-  primaryColor     String   @default("#3f51b5") // Hex; used when themePreset = NULL
-  themePreset      String? // "indigo" | "teal" | "crimson" | …
-  bgPreset         String   @default("white") // "white" | "softGrey" | "tinted"
-  showPersonalInfo Boolean  @default(false) // Toggle avatar + name in header
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  primaryColor     String       @default("#1570EF") // Hex; used when themePreset = NULL
+  themePreset      ThemePreset? // lavender | midnight | aqua | blossom | graphite | sunset | mint
+  bgPreset         BgPreset     @default(plain) // plain | soft | dark
+  showPersonalInfo Boolean      @default(false) // Toggle avatar  name in header
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime     @updatedAt @db.Timestamptz(6)
 
   // relations
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+enum ThemePreset {
+  lavender
+  midnight
+  aqua
+  blossom
+  graphite
+  sunset
+  mint
+}
+
+enum BgPreset {
+  plain
+  soft
+  dark
 }
 
 /**
