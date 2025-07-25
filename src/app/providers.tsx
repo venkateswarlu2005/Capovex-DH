@@ -1,8 +1,8 @@
 'use client';
 import { SessionProvider } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { CssBaseline, Theme, ThemeProvider } from '@mui/material';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -15,12 +15,23 @@ import { ToastProvider } from '@/providers/toast/ToastProvider';
 import mainTheme from '@/theme/mainTheme';
 import { LoadingSpinner } from '@/components';
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({
+	children,
+	themeOverride,
+}: {
+	children: React.ReactNode;
+	themeOverride?: Theme;
+}) {
 	const [isHydrated, setIsHydrated] = useState(false);
 
 	useEffect(() => {
 		setIsHydrated(true);
 	}, []);
+
+	const theme = useMemo(
+		() => themeOverride ?? mainTheme,
+		[themeOverride], // mainTheme is module-level stable
+	);
 
 	if (!isHydrated) {
 		// Show a loading spinner while the client-side is hydrating
@@ -30,7 +41,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<SessionProvider>
 			<AppRouterCacheProvider>
-				<ThemeProvider theme={mainTheme}>
+				<ThemeProvider theme={theme}>
 					<CssBaseline />
 					<ToastProvider>
 						<LocalizationProvider dateAdapter={AdapterDayjs}>
