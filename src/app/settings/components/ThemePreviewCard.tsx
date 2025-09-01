@@ -1,9 +1,9 @@
 'use client';
-import { memo, useMemo } from 'react';
 import { Box, Button, Paper, ThemeProvider, Typography } from '@mui/material';
+import { memo, useMemo } from 'react';
 
-import { buildBrandTheme } from '@/theme/brand/buildBrandTheme';
 import { BgPreset, ThemePreset } from '@/shared/config/brandingConfig';
+import { buildBrandTheme } from '@/theme';
 
 type Props = {
 	themePreset: ThemePreset | null | undefined;

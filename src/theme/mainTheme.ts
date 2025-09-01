@@ -11,7 +11,7 @@ import {
 	disabled as neutralDisabled,
 	hover as neutralHover,
 	text as neutralText,
-} from './ds/baseColors';
+} from './branding/data/baseColors';
 
 import neutralTheme from './globalTheme';
 

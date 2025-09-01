@@ -1,7 +1,8 @@
 'use client';
 import { Box } from '@mui/material';
-import { presetPaletteMap } from '@/theme/brand/presetPaletteMap';
+
 import { ThemePreset } from '@/shared/config/brandingConfig';
+import { presetPaletteMap } from '@/theme';
 
 /**
  * Tiny row of coloured dots that visually summarises a preset theme.

@@ -58,7 +58,6 @@ export async function PATCH(req: NextRequest) {
 
 		const { logoFile, ...scalarFields } = updateInput;
 		UpdateBrandingSettingSchema.parse(scalarFields);
-		UpdateBrandingSettingSchema.parse(scalarFields);
 
 		const updated = await brandingSettingService.updateBrandingSettings(userId, updateInput);
 		const signedLogo = await brandingSettingService.getSignedLogoUrl(updated.logoUrl);
