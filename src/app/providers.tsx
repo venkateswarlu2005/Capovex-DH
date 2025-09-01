@@ -1,4 +1,5 @@
 'use client';
+
 import { SessionProvider } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -12,15 +13,17 @@ import { ModalProvider } from '@/providers/modal/ModalProvider';
 import QueryProvider from '@/providers/query/QueryProvider';
 import { ToastProvider } from '@/providers/toast/ToastProvider';
 
-import mainTheme from '@/theme/mainTheme';
 import { LoadingSpinner } from '@/components';
+import mainTheme from '@/theme/mainTheme';
+import { BrandingSetting } from '@/shared/models';
+import { buildBrandTheme } from '@/theme';
 
 export default function Providers({
 	children,
-	themeOverride,
+	branding,
 }: {
 	children: React.ReactNode;
-	themeOverride?: Theme;
+	branding?: BrandingSetting | null;
 }) {
 	const [isHydrated, setIsHydrated] = useState(false);
 
@@ -29,8 +32,8 @@ export default function Providers({
 	}, []);
 
 	const theme = useMemo(
-		() => themeOverride ?? mainTheme,
-		[themeOverride], // mainTheme is module-level stable
+		() => (branding ? buildBrandTheme(branding) : mainTheme),
+		[branding], // mainTheme is module-level stable
 	);
 
 	if (!isHydrated) {
@@ -42,7 +45,7 @@ export default function Providers({
 		<SessionProvider>
 			<AppRouterCacheProvider>
 				<ThemeProvider theme={theme}>
-					<CssBaseline />
+					<CssBaseline enableColorScheme />
 					<ToastProvider>
 						<LocalizationProvider dateAdapter={AdapterDayjs}>
 							<QueryProvider>

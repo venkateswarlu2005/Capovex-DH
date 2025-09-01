@@ -32,7 +32,8 @@ export async function GET(_req: NextRequest, { params }: { params: { linkId: str
 					primaryColor: setting.primaryColor,
 					bgPreset: setting.bgPreset, // always sent; presets ignore it
 					logoUrl, // signed URL | null
-					displayName, // null if user hid personal info
+					displayName, // null if personal info is hidden
+					showPersonalInfo: setting.showPersonalInfo, // false ⇒ personal info is hidden
 				},
 			},
 			{

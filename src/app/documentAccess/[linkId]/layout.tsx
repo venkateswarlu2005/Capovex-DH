@@ -1,18 +1,15 @@
-import { Grid2, Link, Typography } from '@mui/material';
+import { Box, Grid2, Link, Typography } from '@mui/material';
 import React from 'react';
 
 import Providers from '@/app/providers';
-import { BlueWaveLogo } from '@/components';
-import { BrandingSettings, buildBrandTheme } from '@/theme/brand/buildBrandTheme';
 
-interface RootLayoutProps {
-	children: React.ReactNode;
-}
+import { BrandingSetting } from '@/shared/models';
+import BrandHeader from './components/BrandHeader';
 
 /* ------------------------------------------------------------------ */
-/*  Server-side fetch helpers                                          */
+/*  Server-side fetch helpers                                         */
 /* ------------------------------------------------------------------ */
-async function fetchBranding(linkId: string): Promise<BrandingSettings | null> {
+async function fetchBranding(linkId: string): Promise<BrandingSetting | null> {
 	const base = process.env.NEXT_PUBLIC_APP_URL!;
 	try {
 		const res = await fetch(`${base}/api/public_links/${linkId}/branding`, {
@@ -29,57 +26,58 @@ async function fetchBranding(linkId: string): Promise<BrandingSettings | null> {
 	}
 }
 
-export default async function RootLayout({
+export default async function DocumentAccessLayout({
 	children,
 	params,
 }: {
 	children: React.ReactNode;
-	params: { linkId: string };
+	params: Promise<{ linkId: string }>;
 }) {
-	const branding = await fetchBranding(params.linkId);
-	const brandTheme = branding ? buildBrandTheme(branding) : undefined;
+	const { linkId } = await params;
+
+	const branding = await fetchBranding(linkId);
+
 	return (
 		<>
-			<Providers themeOverride={brandTheme}>
-				<Grid2
-					container
-					direction='column'
-					justifyContent='center'
-					alignItems='center'
-					px={20}
-					py={{ xs: 2, sm: 4, md: 6, lg: 8 }}
-					height='100vh'
-					rowGap={4}>
-					{/* ── Row 1 ──── */}
-					<Grid2>
-						<BlueWaveLogo
-							width='100%'
-							height='2.5rem'
-						/>
-					</Grid2>
-					{/* ── Row 2 ──── */}
+			<Providers branding={branding}>
+				<Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
 					<Grid2
 						container
-						flexGrow={1}
+						direction='column'
 						justifyContent='center'
 						alignItems='center'
-						overflow='auto'
-						width='100%'>
-						{children}
+						px={20}
+						py={{ xs: 2, sm: 4, md: 6, lg: 8 }}
+						height='100vh'
+						rowGap={4}>
+						{/* ── Row 1 ──── */}
+						<Grid2>
+							<BrandHeader branding={branding} />
+						</Grid2>
+						{/* ── Row 2 ──── */}
+						<Grid2
+							container
+							flexGrow={1}
+							justifyContent='center'
+							alignItems='center'
+							overflow='auto'
+							width='100%'>
+							{children}
+						</Grid2>
+						{/* ── Row 3 ──── */}
+						<Grid2>
+							<Typography variant='body1'>
+								Need help?&nbsp;
+								<Link
+									href='#support'
+									underline='hover'
+									variant='body1'>
+									Contact Support
+								</Link>
+							</Typography>
+						</Grid2>
 					</Grid2>
-					{/* ── Row 3 ──── */}
-					<Grid2>
-						<Typography variant='body1'>
-							Need help?&nbsp;
-							<Link
-								href='#support'
-								underline='hover'
-								variant='body1'>
-								Contact Support
-							</Link>
-						</Typography>
-					</Grid2>
-				</Grid2>
+				</Box>
 			</Providers>
 		</>
 	);

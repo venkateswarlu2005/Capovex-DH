@@ -190,11 +190,11 @@ export const presetPaletteMap: Record<ThemePreset, BrandPalette> = {
 	 *  PLACEHOLDERS for: aqua, blossom, graphite, … (to be authored later)  *
 	 *  Copy-paste the “midnight” block, swap hexes with your new ramps.      *
 	 * -------------------------------------------------------------------- */
-	// aqua: {} as unknown as BrandPalette,
-	// blossom: {} as unknown as BrandPalette,
-	// graphite: {} as unknown as BrandPalette,
-	// sunset: {} as unknown as BrandPalette,
-	// mint: {} as unknown as BrandPalette,
+	aqua: {} as unknown as BrandPalette,
+	blossom: {} as unknown as BrandPalette,
+	graphite: {} as unknown as BrandPalette,
+	sunset: {} as unknown as BrandPalette,
+	mint: {} as unknown as BrandPalette,
 } as const;
 /* -------------------------------------------------------------------------- *
  *  ✍🏻 How to add a new palette                                              *

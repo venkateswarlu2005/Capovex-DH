@@ -6,11 +6,11 @@
 export const THEME_PRESETS = [
 	'lavender',
 	'midnight',
-	// 'aqua',
-	// 'blossom',
-	// 'graphite',
-	// 'sunset',
-	// 'mint',
+	'aqua',
+	'blossom',
+	'graphite',
+	'sunset',
+	'mint',
 ] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 
