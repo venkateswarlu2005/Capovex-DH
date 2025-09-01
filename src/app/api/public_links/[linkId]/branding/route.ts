@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createErrorResponse, brandingService, linkService } from '@/services';
+import { createErrorResponse, brandingSettingService, linkService } from '@/services';
 
 /**
  * GET /api/public_links/[linkId]/branding
@@ -19,9 +19,9 @@ export async function GET(_req: NextRequest, { params }: { params: { linkId: str
 		const { ownerId } = await linkService.getLinkMeta(linkId);
 
 		/* ---------- branding row ---------- */
-		const setting = await brandingService.getBrandingSettings(ownerId);
-		const logoUrl = await brandingService.getSignedLogoUrl(setting.logoUrl);
-		const displayName = await brandingService.getDisplayName(ownerId);
+		const setting = await brandingSettingService.getBrandingSettings(ownerId);
+		const logoUrl = await brandingSettingService.getSignedLogoUrl(setting.logoUrl);
+		const displayName = await brandingSettingService.getDisplayName(ownerId);
 
 		/* ---------- payload ---------- */
 		return NextResponse.json(

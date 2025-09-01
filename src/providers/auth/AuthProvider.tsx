@@ -13,24 +13,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 	const pathname = usePathname(); // Get the current route path
 	const [isLoading, setIsLoading] = useState(true);
 
-	// // Define the public routes
-	// const publicRoutes = [
-	// 	'/auth/sign-up',
-	// 	'/auth/forgot-password',
-	// 	'/auth/reset-password',
-	// 	'/auth/account-created',
-	// 	'/auth/password-reset-confirm',
-	// 	'/auth/check-email',
-	// 	'/auth/sign-in',
-	// ];
-
-	// // Check if the current path starts with /auth/reset-password, which is dynamic
-	// const isResetPassFormRoute =
-	// 	pathname.startsWith('/auth/reset-password') && pathname.includes('reset-password');
-
-	// const isLinksUuidRoute =
-	// 	pathname.startsWith('/links/') && /^[a-f0-9-]{36}$/.test(pathname.split('/links/')[1]);
-
 	// useEffect to handle session status changes
 	useEffect(() => {
 		setIsLoading(status === 'loading');

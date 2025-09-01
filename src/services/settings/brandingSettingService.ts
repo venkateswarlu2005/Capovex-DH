@@ -45,7 +45,7 @@ function buildDefaultSettings(): Partial<BrandingSetting> {
  * Service for managing account branding settings, including retrieval,
  * updates, logo uploads, and input parsing.
  */
-export const brandingService = {
+export const brandingSettingService = {
 	/**
 	 * Retrieves the Branding settings for a user, creating defaults if not present.
 	 *
@@ -72,7 +72,7 @@ export const brandingService = {
 	 * @returns The user's display name if available, otherwise `null`.
 	 */
 	async getDisplayName(userId: string): Promise<string | null> {
-		const brandingSettings = await brandingService.getBrandingSettings(userId);
+		const brandingSettings = await brandingSettingService.getBrandingSettings(userId);
 		return brandingSettings.showPersonalInfo && brandingSettings.displayName?.trim()
 			? brandingSettings.displayName.trim()
 			: null;
@@ -98,7 +98,7 @@ export const brandingService = {
 			throw new ServiceError('Invalid theme preset.', 400);
 		}
 
-		const current = await brandingService.getBrandingSettings(userId);
+		const current = await brandingSettingService.getBrandingSettings(userId);
 		const updates: Record<string, any> = {};
 
 		// Scalar fields

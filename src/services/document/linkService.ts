@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 import {
-	brandingService,
+	brandingSettingService,
 	notificationService,
 	ServiceError,
 	storageService,
@@ -110,7 +110,7 @@ export const linkService = {
 				});
 
 				const linkUrl = buildDocumentLinkUrl(slug);
-				const senderName = await brandingService.getDisplayName(userId);
+				const senderName = await brandingSettingService.getDisplayName(userId);
 				// Send share-link e-mails (fire-and-forget – don’t block transaction)
 				if (recipients.length) {
 					console.warn('[linkService] Sending share link emails to:', recipients);

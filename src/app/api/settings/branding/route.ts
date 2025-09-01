@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { brandingService, createErrorResponse } from '@/services';
+import { brandingSettingService, createErrorResponse } from '@/services';
 import { authService } from '@/services/auth/authService';
 
 import { UpdateBrandingSettingSchema } from '@/shared/validation/settingSchemas';
@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
 	try {
 		const userId = await authService.authenticate();
 
-		const setting = await brandingService.getBrandingSettings(userId);
-		const signedLogo = await brandingService.getSignedLogoUrl(setting.logoUrl);
+		const setting = await brandingSettingService.getBrandingSettings(userId);
+		const signedLogo = await brandingSettingService.getSignedLogoUrl(setting.logoUrl);
 
 		return NextResponse.json(
 			{
@@ -54,13 +54,13 @@ export async function PATCH(req: NextRequest) {
 		const userId = await authService.authenticate();
 		const formData = await req.formData();
 
-		const updateInput = await brandingService.buildUpdateInput(formData);
+		const updateInput = await brandingSettingService.buildUpdateInput(formData);
 
 		const { logoFile, ...scalarFields } = updateInput;
 		UpdateBrandingSettingSchema.parse(scalarFields);
 
-		const updated = await brandingService.updateBrandingSettings(userId, updateInput);
-		const signedLogo = await brandingService.getSignedLogoUrl(updated.logoUrl);
+		const updated = await brandingSettingService.updateBrandingSettings(userId, updateInput);
+		const signedLogo = await brandingSettingService.getSignedLogoUrl(updated.logoUrl);
 
 		return NextResponse.json(
 			{
