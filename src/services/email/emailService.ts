@@ -29,8 +29,16 @@ class EmailService extends BaseAdapter {
 			return new DevAdapter();
 		}
 
-		// Build a tiny signature string; if unchanged reuse cached adapter
-		const sig = `${brevoConfig.apiKey}:${brevoConfig.fromName}:${brevoConfig.fromEmail}`;
+		// Build a signature hash; if unchanged reuse cached adapter
+		// Hash the API key for security - avoid storing raw credentials in memory
+		const hash = (str: string) => {
+			let h = 0;
+			for (let i = 0; i < str.length; i++) {
+				h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+			}
+			return h.toString(36);
+		};
+		const sig = `${hash(brevoConfig.apiKey)}:${brevoConfig.fromName}:${brevoConfig.fromEmail}`;
 		if (sig === this.cachedSig && this.cachedEmailAdapter) return this.cachedEmailAdapter;
 
 		const adapter = new BrevoAdapter(brevoConfig);
