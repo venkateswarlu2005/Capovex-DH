@@ -1,79 +1,94 @@
-// =========== LINK TYPE ===========
+import { VisitorFieldKey } from '../config/visitorFieldsConfig';
 
-export interface LinkType {
-	id: number;
-	linkId: string;
-	documentId: string;
-	userId: string;
-	alias?: string;
-	linkUrl: string;
-	isPublic: boolean;
-	visitorFields?: string[];
-	expirationTime?: string;
-	password?: string;
-	updatedAt: string;
-	createdAt: string;
+/**
+ * API response shape for public link metadata.
+ */
+export interface PublicLinkMetaResponse {
+	message: string;
+	data: PublicLinkMeta;
 }
 
-// =========== LINK FORM VALUES ===========
-
-export interface LinkFormValues {
-	password?: string;
-	isPublic: boolean;
-	alias?: string;
-	expirationTime?: string;
-	requirePassword: boolean;
-	expirationEnabled: boolean;
-	requireUserDetails: boolean;
-	visitorFields?: string[];
-	contactEmails?: { label: string; id: number }[];
-	selectFromContact: boolean;
-	otherEmails?: string;
-	sendToOthers: boolean;
-}
-
-// =========== LINK PAYLOAD ===========
-
-export interface CreateDocumentLinkPayload {
-	documentId: string;
-	alias?: string; // Alias for the link
-	isPublic: boolean;
-	expirationTime?: string; // ISO string format
-	expirationEnabled?: boolean;
-	requirePassword?: boolean;
-	password?: string;
-	requireUserDetails?: boolean;
-	visitorFields?: string[]; // Array of required visitor details
-	contactEmails?: { label: string; id: number }[];
-	selectFromContact: boolean;
-	otherEmails?: string;
-	sendToOthers: boolean;
-}
-
-// =========== INVITE RECIPIENTS PAYLOAD ===========
-
-export interface InviteRecipientsPayload {
-	linkUrl: string;
-	recipients: string[];
-}
-
-// =========== LINK DATA ===========
-
-export interface LinkData {
-	isPasswordProtected?: boolean;
-	requiredUserDetailsOption?: number;
+/**
+ * Metadata for a link, including optional instant-view fields.
+ */
+export interface PublicLinkMeta {
+	isPasswordProtected: boolean;
+	visitorFields: VisitorFieldKey[];
+	ownerId: string;
 	signedUrl?: string;
 	fileName?: string;
 	size?: number;
+	fileType?: string;
+	documentId?: string;
+}
+
+/**
+ * Payload for a public link file, including signed URL and file metadata.
+ */
+export interface PublicLinkFilePayload {
+	signedUrl: string;
+	fileName: string;
+	size: number; // File size in bytes
+	fileType: string; // MIME type
+	documentId: string;
+	documentLinkId?: string; // Optional when not relevant
 }
 
 // =========== LINK DETAIL ===========
 
-export interface LinkDetail {
-	documentLinkId: string; // unique string
-	alias: string; // The links's friendly name
-	document_id: string; // The document_id from DB
-	createdLink: string; // The linkUrl from DB
-	lastActivity: Date; // The link's updatedAt
-	linkViews: number; // If you track actual link views, you can use a real value
+/**
+ * Row representing a document link and its analytics summary.
+ */
+export interface LinkDetailRow {
+	linkId: string;
+	alias: string | null;
+	documentId: string;
+	createdLink: string; // Same as linkUrl
+	lastActivity: string; // ISO date string
+	linkViews: number; // Aggregated analytics
+}
+
+/**
+ * Local state stages returned by `useLinkAccess`.
+ */
+export type LinkAccessState = 'loading' | 'gate' | 'file' | 'error';
+
+// =========== CONTACT DETAIL ===========
+
+/**
+ * Contact details derived from link visitor analytics.
+ */
+export interface Contact {
+	id: number;
+	name: string; // Combined first + last name
+	email: string; // Visitor's email address
+	documentId: string; // The documentId from DB
+	lastActivity: Date; // Date/time of their last activity
+	lastViewedLink: string; // The last link or friendly name they viewed
+	totalVisits: number; // Total visits for that email across the user's links
+	downloads: number; // Total downloads by this contact
+	views: string; // Total Views by this contact
+}
+
+// =========== LINK VISITOR DETAIL ===========
+
+/**
+ * Visitor record for a specific document link.
+ */
+export interface LinkVisitor {
+	id: number;
+	linkId: string;
+	name: string;
+	email: string;
+	visitedAt: string; // ISO date string
+	visitorMetaData: string | null; // Optional metadata (e.g., browser info)
+}
+
+/**
+ * Recipient object for share-link invitations.
+ * Contains email and optional name.
+ */
+export interface ShareLinkRecipient {
+	email: string;
+	name?: string;
 }

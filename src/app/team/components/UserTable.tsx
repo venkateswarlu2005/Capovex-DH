@@ -2,7 +2,14 @@ import { Dropdown, Paginator } from '@/components';
 
 import { TrashIcon } from '@/icons';
 
-import { User } from '@/shared/models';
+export interface User {
+	userId: number;
+	name: string;
+	email: string;
+	role: 'Administrator' | 'Member';
+	createdAt: string;
+	// ... etc
+}
 
 import {
 	Paper,
@@ -75,7 +82,7 @@ const UserTable = ({ users, page, setPage, pageSize, totalUsers }: Props) => (
 			</Table>
 		</TableContainer>
 		<Paginator
-			page={page}
+			nextPage={page}
 			totalPages={Math.ceil(totalUsers / pageSize)}
 			onPageChange={setPage}
 			pageSize={pageSize}

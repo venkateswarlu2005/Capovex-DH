@@ -35,7 +35,7 @@ export default function Sidebar() {
 	const menuItems = [
 		{ text: 'Documents', icon: FileIcon, href: '/documents' },
 		{ text: 'Contacts', icon: UserIcon, href: '/contacts' },
-		// { text: 'Settings', icon: SettingsIcon, href: '/settings' },
+		{ text: 'Settings', icon: SettingsIcon, href: '/settings' },
 	];
 
 	const openSidebar = () => setIsOpen(true);
@@ -76,8 +76,6 @@ export default function Sidebar() {
 						pt: { xs: 4, sm: 8, md: 16 },
 						pb: { xs: 2, sm: 4, md: 10 },
 						px: { xs: 2, sm: 4, md: 10 },
-						borderRight: 1,
-						borderColor: 'border.light',
 					}}>
 					{/* Top Section */}
 					<Box
@@ -126,17 +124,11 @@ export default function Sidebar() {
 												</ListItemIcon>
 												<ListItemText
 													primary={text}
-													//For MUI V7 - ListItemText no longer accepts primaryTypographyProps
-													// slotProps={
-													// 	isActive
-													// 		? { variant: 'h3', color: 'text.icon' }
-													// 		: { variant: 'h3', fontWeight: 400, color: 'text.primary' }
-													// }
-													primaryTypographyProps={
-														isActive
+													slotProps={{
+														primary: isActive
 															? { variant: 'h3', color: 'text.icon' }
-															: { variant: 'h3', fontWeight: 400, color: 'text.primary' }
-													}
+															: { variant: 'h3', fontWeight: 400, color: 'text.primary' },
+													}}
 												/>
 											</ListItemButton>
 										</Link>

@@ -8,9 +8,9 @@ import { BarChartIcon, CheckIcon, LinkIcon, SettingsIcon } from '@/icons';
 import { NavLink } from '@/components';
 import ActionMenu from './ActionMenu';
 
-import { formatDateTime } from '@/shared/utils';
-import { DocumentType } from '@/shared/models';
 import { FileTypeConfig } from '@/shared/config/fileIcons';
+import { DocumentType } from '@/shared/models';
+import { formatDateTime } from '@/shared/utils';
 
 interface Props {
 	document: DocumentType;
@@ -33,7 +33,7 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 	};
 
 	const routetoDocument = () => {
-		router.push(`/documents/${document.document_id}`);
+		router.push(`/documents/${document.documentId}`);
 	};
 	const linkToCopy = () => {
 		const totalLinks = document.createdLinks?.length ?? 0;
@@ -64,7 +64,7 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 					alignItems='center'>
 					<Box>
 						<NavLink
-							href={`/documents/${document.document_id}`}
+							href={`/documents/${document.documentId}`}
 							linkText={document.fileName}
 							color='text.primary'
 							prefetch={true}
@@ -78,7 +78,7 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 							gap='0.5rem'>
 							<span>{formatDateTime(document.createdAt)}</span>
 							<Typography variant='subtitle1'>•</Typography>
-							<span>{document.links} links</span>
+							<span>{document.stats.links} links</span>
 							<Typography variant='subtitle1'>•</Typography>
 							<span>Version 1</span>
 						</Typography>
@@ -107,18 +107,18 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 				</Box>
 			</TableCell>
 
-			<TableCell>
+			<TableCell sx={{ textAlign: 'center' }}>
 				<Chip
 					icon={<BarChartIcon />}
-					label={`${document.viewers} views`}
+					label={`${document.stats.totalViews} views`}
 					size='small'
 					color='secondary'
 					sx={{
-						width: '5.5rem',
+						width: '8rem',
 					}}
 				/>
 			</TableCell>
-			<TableCell sx={{ pl: '1.5rem' }}>
+			<TableCell sx={{ textAlign: 'center' }}>
 				<IconButton
 					disabled={document.createdLinks?.length === 0}
 					onClick={handleLinkCopy}>
@@ -129,7 +129,7 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 					)}
 				</IconButton>
 			</TableCell>
-			<TableCell sx={{ pl: '1.5rem' }}>
+			<TableCell sx={{ textAlign: 'center' }}>
 				<IconButton onClick={handleMenuOpen}>
 					<SettingsIcon
 						width={20}
@@ -141,7 +141,7 @@ const DocumentsTableRow = ({ document, onDelete }: Props) => {
 						open={open}
 						anchorEl={anchorEl}
 						onDelete={onDelete}
-						documentId={document.document_id}
+						document={document}
 						onClose={handleMenuClose}
 						onAnalytics={routetoDocument}
 					/>

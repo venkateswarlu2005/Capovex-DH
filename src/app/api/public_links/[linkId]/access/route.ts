@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createErrorResponse, LinkService } from '@/app/api/_services';
+import { createErrorResponse, linkService } from '@/services';
+import { PublicLinkAccessSchema } from '@/shared/validation/publicLinkSchemas';
+import { Prisma } from '@prisma/client';
 
 /**
  * POST /api/public_links/[linkId]/access
@@ -8,38 +10,41 @@ import { createErrorResponse, LinkService } from '@/app/api/_services';
 export async function POST(req: NextRequest, props: { params: Promise<{ linkId: string }> }) {
 	try {
 		const { linkId } = await props.params;
-		const { firstName, lastName, email, password } = await req.json();
-
-		// 1) Retrieve link
-		const link = await LinkService.getPublicLink(linkId);
-		if (!link) {
-			return createErrorResponse('Link not found', 404);
+		if (!linkId) {
+			return createErrorResponse('Link ID is required.', 400);
 		}
 
-		// 2) Check expiration
-		if (link.expirationTime && new Date(link.expirationTime) <= new Date()) {
-			return createErrorResponse('Link is expired', 410);
+		/* ---------- parse & validate body ---------- */
+		const raw = await req.json().catch(() => ({}));
+		const parsed = PublicLinkAccessSchema.parse(raw); // .passthrough() keeps extra fields
+
+		const { password = '', firstName = '', lastName = '', email = '', ...visitorMetaData } = parsed;
+
+		/* cast dynamic fields so Prisma accepts them */
+		const jsonMeta: Prisma.InputJsonValue = visitorMetaData as Prisma.InputJsonValue;
+
+		/* ---------- guard: link existence / password / expiry ---------- */
+		await linkService.validateLinkAccess(linkId, password);
+
+		/* ---------- optional visitor log (service skips public links) --- */
+		const hasVisitorInfo =
+			Boolean(firstName || lastName || email) || Object.keys(visitorMetaData).length > 0;
+
+		if (hasVisitorInfo) {
+			await linkService.logVisitor(linkId, firstName, lastName, email, jsonMeta);
 		}
 
-		// 3) If password is required, verify
-		const passwordOk = await LinkService.verifyLinkPassword(link, password);
-		if (!passwordOk) {
-			return createErrorResponse('Invalid password', 401);
-		}
+		/* ---------- signed URL & file meta ------------------------------ */
+		const { signedUrl, fileName, size, fileType, documentId } =
+			await linkService.getSignedFileFromLink(linkId);
 
-		// 4) Log visitor.
-		await LinkService.logVisitor(linkId, firstName, lastName, email);
-
-		// 5) Get a signed URL for the doc
-		try {
-			const { fileName, signedUrl, size } = await LinkService.getSignedFileFromLink(linkId);
-			return NextResponse.json({
+		return NextResponse.json(
+			{
 				message: 'File access granted',
-				data: { signedUrl, fileName, size },
-			});
-		} catch (err) {
-			return createErrorResponse('Error retrieving file', 400, err);
-		}
+				data: { signedUrl, fileName, size, fileType, documentId },
+			},
+			{ status: 200 },
+		);
 	} catch (error) {
 		return createErrorResponse('Server error while accessing link', 500, error);
 	}

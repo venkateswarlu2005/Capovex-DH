@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { LinkService, createErrorResponse } from '@/app/api/_services';
+
+import { createErrorResponse, linkService } from '@/services';
 
 /**
  * GET /api/public_links/[linkId]
+ * Returns password / visitor-field requirements and,
+ * for truly-public links, an immediate signed URL + file meta.
  */
 export async function GET(req: NextRequest, props: { params: Promise<{ linkId: string }> }) {
 	try {
@@ -11,33 +14,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ linkId: s
 			return createErrorResponse('Link ID is required.', 400);
 		}
 
-		const link = await LinkService.getPublicLink(linkId);
-		console.log('🚀 ~ GET ~ link:', link);
-		console.log('Link ID:', linkId);
-		if (!link) {
-			console.log(`Link not found: ${linkId}`);
-			return NextResponse.json({ message: 'Link not found' }, { status: 404 });
-		}
+		const meta = await linkService.getLinkMeta(linkId);
 
-		// Check expiration
-		if (link.expirationTime && new Date(link.expirationTime) <= new Date()) {
-			return NextResponse.json({ message: 'Link is expired' }, { status: 410 });
-		}
-
-		// If link is public, we see if it requires user details or password
-		const isPasswordProtected = !!link.password;
-		const visitorFields = link.visitorFields;
-
-		return NextResponse.json(
-			{
-				message: 'Link is valid',
-				data: {
-					isPasswordProtected,
-					visitorFields,
-				},
-			},
-			{ status: 200 },
-		);
+		return NextResponse.json({ message: 'Link is valid', data: meta }, { status: 200 });
 	} catch (error) {
 		return createErrorResponse('Server error while fetching link.', 500, error);
 	}

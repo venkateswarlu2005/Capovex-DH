@@ -1,23 +1,40 @@
 'use client';
-import { SessionProvider } from 'next-auth/react';
-import { useEffect, useState } from 'react';
 
-import { CssBaseline, ThemeProvider } from '@mui/material';
+import { SessionProvider } from 'next-auth/react';
+import { useEffect, useMemo, useState } from 'react';
+
+import { CssBaseline, Theme, ThemeProvider } from '@mui/material';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v13-appRouter';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+
+import AuthProvider from '@/providers/auth/AuthProvider';
+import { ModalProvider } from '@/providers/modal/ModalProvider';
+import QueryProvider from '@/providers/query/QueryProvider';
+import { ToastProvider } from '@/providers/toast/ToastProvider';
 
 import { LoadingSpinner } from '@/components';
-import AuthWrapper from '@/providers/auth/AuthWrapper';
-import { ToastProvider } from '@/providers/toast/ToastProvider';
-import QueryProvider from '@/providers/query/QueryProvider';
+import mainTheme from '@/theme/mainTheme';
+import { BrandingSetting } from '@/shared/models';
+import { buildBrandTheme } from '@/theme';
 
-import globalTheme from '@/theme/globalTheme';
-
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({
+	children,
+	branding,
+}: {
+	children: React.ReactNode;
+	branding?: BrandingSetting | null;
+}) {
 	const [isHydrated, setIsHydrated] = useState(false);
 
 	useEffect(() => {
 		setIsHydrated(true);
 	}, []);
+
+	const theme = useMemo(
+		() => (branding ? buildBrandTheme(branding) : mainTheme),
+		[branding], // mainTheme is module-level stable
+	);
 
 	if (!isHydrated) {
 		// Show a loading spinner while the client-side is hydrating
@@ -27,12 +44,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 	return (
 		<SessionProvider>
 			<AppRouterCacheProvider>
-				<ThemeProvider theme={globalTheme}>
-					<CssBaseline />
+				<ThemeProvider theme={theme}>
+					<CssBaseline enableColorScheme />
 					<ToastProvider>
-						<QueryProvider>
-							<AuthWrapper>{children}</AuthWrapper>
-						</QueryProvider>
+						<LocalizationProvider dateAdapter={AdapterDayjs}>
+							<QueryProvider>
+								<ModalProvider>
+									<AuthProvider>{children}</AuthProvider>
+								</ModalProvider>
+							</QueryProvider>
+						</LocalizationProvider>
 					</ToastProvider>
 				</ThemeProvider>
 			</AppRouterCacheProvider>

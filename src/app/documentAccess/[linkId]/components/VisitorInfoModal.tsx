@@ -15,12 +15,18 @@ import Grid from '@mui/material/Grid2';
 
 import { FormInput, LoadingButton } from '@/components';
 
-import { useFormSubmission, useValidatedFormData, useVisitorSubmission } from '@/hooks';
+import { useCreateLinkVisitorMutation } from '@/hooks/data';
+import { useFormSubmission, useValidatedFormData } from '@/hooks/forms';
 
 import { EyeIcon, EyeOffIcon, FileDownloadIcon } from '@/icons';
+import { VisitorFieldKey, visitorFieldsConfigByKey } from '@/shared/config/visitorFieldsConfig';
+import { PublicLinkFilePayload } from '@/shared/models';
 import { requiredFieldRule, splitName, validEmailRule } from '@/shared/utils';
-import { visitorFieldsConfigByKey } from '@/shared/config/visitorFieldsConfig';
 
+/**
+ * @deprecated
+ * This function is deprecated and will be removed in future versions.
+ */
 function getFormConfig(passwordRequired: boolean, visitorFields: string[]) {
 	const formConfig: {
 		initialValues: Record<string, string>;
@@ -52,14 +58,18 @@ function getFormConfig(passwordRequired: boolean, visitorFields: string[]) {
 interface VisitorInfoModalProps {
 	linkId: string;
 	passwordRequired: boolean;
-	visitorFields: string[];
-	onVisitorInfoModalSubmit: (data: Record<string, any>) => void;
+	visitorFields: VisitorFieldKey[];
+	onVisitorInfoModalSubmit: (data: PublicLinkFilePayload) => void;
 }
 
+/**
+ * @deprecated
+ * This component is deprecated and will be removed in future versions.
+ */
 export default function VisitorInfoModal({
 	linkId,
 	passwordRequired,
-	visitorFields,
+	visitorFields = [],
 	onVisitorInfoModalSubmit,
 }: VisitorInfoModalProps) {
 	const [isPasswordVisible, setIsPasswordVisible] = React.useState(false);
@@ -70,7 +80,7 @@ export default function VisitorInfoModal({
 		validationRules: formConfig.validationRules,
 	});
 
-	const { mutateAsync: submitVisitorData, isPending } = useVisitorSubmission();
+	const { mutateAsync: submitVisitorData, isPending } = useCreateLinkVisitorMutation();
 
 	const { loading, handleSubmit, toast } = useFormSubmission({
 		onSubmit: async () => {
@@ -97,9 +107,9 @@ export default function VisitorInfoModal({
 			const splittedName = splitName(values.name);
 			const payload = {
 				linkId,
-				firstName: splittedName.first_name,
-				lastName: splittedName.last_name,
-				email: values.email || '',
+				firstName: splittedName.firstName,
+				lastName: splittedName.lastName,
+				email: values.email || undefined,
 				password: values.password || '',
 				visitorMetaData: null, // This will be populated to add any additional user information, Implementation from API endpoint as well.
 			};
@@ -107,7 +117,7 @@ export default function VisitorInfoModal({
 			const response = await submitVisitorData({ linkId, payload });
 
 			if (!response.data) {
-				throw new Error(response.data.message || 'No file data returned.');
+				throw new Error('No file data returned.');
 			}
 
 			onVisitorInfoModalSubmit(response.data);
@@ -161,7 +171,8 @@ export default function VisitorInfoModal({
 								<Grid size={3}>
 									<Typography
 										variant='h3'
-										mt={field === 'password' ? 10 : 0}>
+										// mt={field === 'password' ? 10 : 0}
+									>
 										{fieldConfig.label}
 									</Typography>
 								</Grid>

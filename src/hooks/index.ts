@@ -1,18 +1,7 @@
-export { default as useFetchContacts } from './contacts/useFetchContacts';
+export { useModal } from './ui/useModal';
+export { useResponsivePageSize } from './ui/useResponsivePageSize';
+export { useToast } from './ui/useToast';
 
-export { default as useFetchDocuments } from './documents/useFetchDocuments';
-export { default as useUploadDocument } from './documents/useUploadDocument';
-export { default as useDeleteDocument } from './documents/useDeleteDocument';
-
-export { default as useCreateLink } from './documents/useCreateLink';
-
-export { default as useDocumentAnalytics } from './useDocumentAnalytics';
-export { default as useDocumentData } from './useDocumentData';
-export { default as useDocumentDetail } from './useDocumentDetail';
-export { useFormSubmission } from './useFormSubmission';
-export { useModal } from './useModal';
-export { useSort } from './useSort';
-export { useToast } from './useToast';
-export { useValidatedFormData } from './useValidatedFormData';
-export { default as useDocumentAccess } from './documentAccess/useDocumentAccess';
-export { default as useVisitorSubmission } from './documentAccess/useVisitorSubmission';
+export { useHashTab } from './utils/useHashTab';
+export { usePaginatedTable } from './utils/usePaginatedTable';
+export { useSort } from './utils/useSort';

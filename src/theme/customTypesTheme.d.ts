@@ -1,59 +1,61 @@
 import '@mui/material/styles';
+import {
+	TextTokens,
+	BackgroundTokens,
+	AlertTokens,
+	BorderTokens,
+	HoverTokens,
+	DisabledTokens,
+} from './themeTypes';
 
 declare module '@mui/material' {
-	interface Palette {
-		border: {
-			light: string;
-			dark: string;
-		};
-	}
-
 	interface SimplePaletteColorOptions {
 		text?: string;
-	}
-
-	interface PaletteOptions {
-		border?: {
-			light: string;
-			dark: string;
-		};
-	}
-
-	interface ThemeOptions {
-		shape?: {
-			borderRadius: number;
-			borderThick?: number;
-			boxShadow?: string;
-		};
-		customShadows?: {
-			menu?: string;
-		};
 	}
 }
 
 declare module '@mui/material/styles' {
+	interface TypeBackground extends BackgroundTokens {}
+	interface TypeText extends Pick<TextTokens, 'primary' | 'secondary'>, Partial<TextTokens> {}
+
 	interface TypeBackground {
 		content: string;
 		alt: string;
-		brand: string;
+		primary: string;
 		fill: string;
 		error: string;
-	}
-
-	interface Theme {
-		customShadows: {
-			menu: string;
-		};
+		secondary: string; // light-grey / blue tint
+		secondaryButton: string; // legacy neutral button BG
+		paper: string; // white / brand paper
 	}
 
 	// Extend the Variant type
 	interface TypographyVariants {
+		allVariants?: React.CSSProperties;
 		subtitle3: React.CSSProperties;
 	}
 
 	// Extend the Variant type for theme options
 	interface TypographyVariantsOptions {
+		allVariants?: React.CSSProperties;
 		subtitle3?: React.CSSProperties;
+	}
+
+	interface Theme {
+		text: TextTokens;
+		background: BackgroundTokens;
+		hover: HoverTokens;
+		alert: AlertTokens;
+		border: BorderTokens;
+		disabled: DisabledTokens;
+	}
+	interface ThemeOptions {
+		text?: Partial<TextTokens>;
+		background?: Partial<BackgroundTokens>;
+		hover?: Partial<HoverTokens>;
+		alert?: Partial<AlertTokens>;
+		border?: Partial<BorderTokens>;
+		disabled?: Partial<DisabledTokens>;
 	}
 }
 

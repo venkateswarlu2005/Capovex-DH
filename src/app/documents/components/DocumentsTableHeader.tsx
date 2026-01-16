@@ -14,7 +14,7 @@ const DocumentsTableHeader = ({ orderBy, orderDirection, onSort }: Props) => (
 	<TableRow>
 		<TableCell sx={{ width: '5%' }}></TableCell>
 		<TableCell sx={{ width: '40%' }}>DOCUMENT</TableCell>
-		<TableCell sx={{ width: '25%' }}>
+		<TableCell sx={{ width: '20%' }}>
 			<TableSortLabel
 				active={orderBy === 'uploader'}
 				direction={orderDirection}
@@ -26,9 +26,9 @@ const DocumentsTableHeader = ({ orderBy, orderDirection, onSort }: Props) => (
 				UPLOADER
 			</TableSortLabel>
 		</TableCell>
-		<TableCell sx={{ width: '15%', pl: '1.5rem' }}>ANALYTICS</TableCell>
-		<TableCell sx={{ width: '10%', pl: '1.5rem' }}>LINK</TableCell>
-		<TableCell sx={{ width: '5%' }}>ACTION</TableCell>
+		<TableCell sx={{ width: '15%', textAlign: 'center' }}>ANALYTICS</TableCell>
+		<TableCell sx={{ width: '10%', textAlign: 'center' }}>LINK</TableCell>
+		<TableCell sx={{ width: '10%', textAlign: 'center' }}>ACTION</TableCell>
 	</TableRow>
 );
 

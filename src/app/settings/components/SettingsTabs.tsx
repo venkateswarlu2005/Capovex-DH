@@ -1,21 +1,33 @@
 'use client';
 
 import { Tab, Tabs } from '@mui/material';
-import { useState } from 'react';
+
+import { useHashTab } from '@/hooks';
 
 export default function SettingsTabs() {
-	const [tabValue, setTabValue] = useState(0);
+	const { tabKey, setTabKey } = useHashTab('branding', ['branding', 'system'] as const);
 
-	const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-		setTabValue(newValue);
+	const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
+		if (newValue === 'branding' || newValue === 'system') setTabKey(newValue);
 	};
+
 	return (
 		<>
 			<Tabs
-				value={tabValue}
+				value={tabKey}
 				onChange={handleTabChange}
-				aria-label='Branding'>
-				<Tab label='Branding' />
+				textColor='primary'
+				indicatorColor='primary'>
+				<Tab
+					value='branding'
+					label='Branding & Layout'
+					id='branding-tab'
+				/>
+				{/* <Tab
+					value='system'
+					label='System & Notifications'
+					id='system-tab'
+				/> */}
 			</Tabs>
 		</>
 	);

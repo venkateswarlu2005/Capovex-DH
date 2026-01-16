@@ -1,42 +1,66 @@
-import axios from 'axios';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 
-import { Box, IconButton, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 
 import { CheckIcon, CopyIcon, TrashIcon } from '@/icons';
 
-import { ModalWrapper } from '@/components';
+import { useModalContext } from '@/providers/modal/ModalProvider';
 
-import { useModal, useToast } from '@/hooks';
-import { Contact, LinkDetail } from '@/shared/models';
+import { useToast } from '@/hooks';
+import { useDeleteLinkMutation } from '@/hooks/data';
+
+import { Contact, LinkDetailRow } from '@/shared/models';
 import { formatDateTime } from '@/shared/utils';
 
 interface InfoTableRowProps {
 	variant?: 'linkTable' | 'visitorTable';
-	documentDetail: LinkDetail | Contact;
+	documentDetail: LinkDetailRow | Contact;
 }
 
-export default function InfoTableRow({ documentDetail, variant }: InfoTableRowProps) {
+function InfoTableRow({ documentDetail, variant }: InfoTableRowProps) {
 	const [isLinkCopied, setIsLinkCopied] = useState(false);
+	const { openModal } = useModalContext();
 	const { showToast } = useToast();
-	const deleteModal = useModal();
 
-	const isLinkDetail = (d: LinkDetail | Contact): d is LinkDetail =>
-		(d as LinkDetail).createdLink !== undefined;
+	const deleteLink = useDeleteLinkMutation();
 
-	const isVisitorDetail = (d: LinkDetail | Contact): d is Contact =>
+	const isLinkDetail = (d: LinkDetailRow | Contact): d is LinkDetailRow =>
+		(d as LinkDetailRow).createdLink !== undefined;
+
+	const isVisitorDetail = (d: LinkDetailRow | Contact): d is Contact =>
 		(d as Contact).name !== undefined;
 
-	const handleDeleteLink = async () => {
-		try {
-			const link = documentDetail as LinkDetail;
-			await axios.delete(`/api/documents/${link.document_id}/links/${link.documentLinkId}`);
+	const handleOpenLinkVisitorModal = (documentDetail: LinkDetailRow) => {
+		openModal({
+			type: 'visitorLog',
+			contentProps: {
+				documentId: documentDetail.documentId,
+				linkId: documentDetail.linkId,
+				linkAlias: documentDetail.alias || documentDetail.createdLink,
+			},
+		});
+	};
 
-			showToast({ message: 'Link deleted!', variant: 'success' });
-			deleteModal.closeModal();
-		} catch (err) {
-			showToast({ message: 'Error deleting link', variant: 'error' });
-		}
+	const handleDelete = () => {
+		openModal({
+			type: 'deleteConfirm',
+			contentProps: {
+				title: 'Really delete this link?',
+				description:
+					'Deleting this link is permanent. All associated share settings will be removed.',
+				onConfirm: async () => {
+					try {
+						const link = documentDetail as LinkDetailRow;
+						await deleteLink.mutateAsync({ documentId: link.documentId, linkId: link.linkId });
+						await deleteLink.mutateAsync({ documentId: link.documentId, linkId: link.linkId });
+
+						showToast({ message: 'Link deleted successfully!', variant: 'success' });
+					} catch (err) {
+						showToast({ message: 'Error deleting link', variant: 'error' });
+					}
+				},
+			},
+		});
 	};
 
 	const handleLinkCopy = () => {
@@ -55,7 +79,7 @@ export default function InfoTableRow({ documentDetail, variant }: InfoTableRowPr
 			<>
 				<TableRow hover>
 					<TableCell
-						sx={{ width: '45%', pl: 20, py: { sm: '0.7rem', md: '0.92rem', lg: '1.18rem' } }}>
+						sx={{ width: '45%', pl: '2.5rem', py: { sm: '0.7rem', md: '0.92rem', lg: '1.18rem' } }}>
 						<Box
 							display='flex'
 							alignItems='center'
@@ -72,7 +96,7 @@ export default function InfoTableRow({ documentDetail, variant }: InfoTableRowPr
 									},
 								}}
 								placement='bottom-start'>
-								<Typography>
+								<Typography noWrap>
 									{documentDetail.alias ? documentDetail.alias : documentDetail.createdLink}
 									<IconButton
 										sx={{ ml: 10 }}
@@ -86,30 +110,31 @@ export default function InfoTableRow({ documentDetail, variant }: InfoTableRowPr
 					<TableCell sx={{ width: '20%', textAlign: 'center' }}>
 						{formatDateTime(documentDetail.lastActivity)}
 					</TableCell>
-					<TableCell sx={{ width: '25%', textAlign: 'center' }}>
+					<TableCell sx={{ width: '10%', textAlign: 'center' }}>
 						{documentDetail.linkViews}
 					</TableCell>
 					<TableCell sx={{ width: '10%', textAlign: 'center' }}>
-						<IconButton onClick={deleteModal.openModal}>
+						<IconButton onClick={handleDelete}>
 							<Box
 								component={TrashIcon}
-								width={{ sm: '1rem', md: '1.1rem', lg: '1.18rem' }}
+								width={{ sm: '1rem', md: '1.04rem', lg: '1.08rem' }}
 								height='auto'
 							/>
 						</IconButton>
 					</TableCell>
+					<TableCell sx={{ width: '15%', textAlign: 'center' }}>
+						<Tooltip
+							title='View visitors'
+							placement='bottom'>
+							<Button
+								variant='outlined'
+								size='small'
+								onClick={() => handleOpenLinkVisitorModal(documentDetail)}>
+								View Log
+							</Button>
+						</Tooltip>
+					</TableCell>
 				</TableRow>
-
-				{/* Confirm Delete Modal */}
-				<ModalWrapper
-					variant='delete'
-					title='Really delete this link?'
-					description='Deleting this link is permanent. All associated share settings will be removed.'
-					confirmButtonText='Delete link'
-					open={deleteModal.isOpen}
-					onClose={handleDeleteLink}
-					toggleModal={deleteModal.closeModal}
-				/>
 			</>
 		);
 	}
@@ -118,19 +143,18 @@ export default function InfoTableRow({ documentDetail, variant }: InfoTableRowPr
 	if (variant === 'visitorTable' && isVisitorDetail(documentDetail)) {
 		return (
 			<TableRow hover>
-				<TableCell sx={{ width: '30%', pl: 20 }}>
-					{documentDetail.name}
+				<TableCell sx={{ width: '30%', pl: '2.5rem' }}>
+					{documentDetail.name ? documentDetail.name : 'N/A'}
 					<br />
-					<Typography variant='caption'>{documentDetail.email}</Typography>
+					<Typography variant='caption'>
+						{documentDetail.email ? documentDetail.email : 'N/A'}
+					</Typography>
 				</TableCell>
 				<TableCell sx={{ width: '25%', textAlign: 'center' }}>
 					{formatDateTime(documentDetail.lastActivity)}
 				</TableCell>
 				<TableCell sx={{ width: '15%', textAlign: 'center' }}>{documentDetail.downloads}</TableCell>
-				<TableCell sx={{ width: '15%', textAlign: 'center' }}>{documentDetail.duration}</TableCell>
-				<TableCell sx={{ width: '15%', textAlign: 'center' }}>
-					{documentDetail.completion}
-				</TableCell>
+				<TableCell sx={{ width: '15%', textAlign: 'center' }}>{documentDetail.views}</TableCell>
 			</TableRow>
 		);
 	}
@@ -138,3 +162,5 @@ export default function InfoTableRow({ documentDetail, variant }: InfoTableRowPr
 	// If neither variant matches or the data is incomplete
 	return null;
 }
+
+export default memo(InfoTableRow);

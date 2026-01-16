@@ -14,6 +14,7 @@ export { default as MailIcon } from './communication/MailIcon';
 export { default as PencilIcon } from './editor/PencilIcon';
 
 export { default as AudioIcon } from './files/AudioIcon';
+export { default as DownloadIcon } from './files/DownloadIcon';
 export { default as ExcelIcon } from './files/ExcelIcon';
 export { default as FileDownloadIcon } from './files/FileDownloadIcon';
 export { default as FileIcon } from './files/FileIcon';
@@ -26,6 +27,9 @@ export { default as TextIcon } from './files/TextIcon';
 export { default as VideoIcon } from './files/VideoIcon';
 export { default as WordIcon } from './files/WordIcon';
 export { default as ZIPIcon } from './files/ZIPIcon';
+
+export { default as CreateLinkIcon } from './files/CreateLinkIcon';
+export { default as FilePreviewIcon } from './files/FilePreviewIcon';
 
 export { default as KeyIcon } from './security/KeyIcon';
 export { default as LockIcon } from './security/LockIcon';

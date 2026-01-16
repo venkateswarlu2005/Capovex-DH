@@ -1,107 +1,160 @@
 'use client';
 
-import 'pdfjs-dist/web/pdf_viewer.css';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 
-import { Box, Button, Typography } from '@mui/material';
-import * as pdfjsLib from 'pdfjs-dist';
+import { Box, Typography } from '@mui/material';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+import { useCreateDocumentAnalyticsMutation } from '@/hooks/data';
+
+import Paginator from '../navigation/Paginator';
+
+import { AnalyticsEventType } from '@/shared/enums';
+
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 interface PDFViewerProps {
-	pdfUrl: string;
+	url: string;
+	documentId: string;
+	linkId?: string;
+	visitorId?: number;
+	skipAnalytics?: boolean;
+	enableKeyboardPaging?: boolean;
+	maxViewHeight?: string;
+	onReady?: () => void;
+	onMount?: () => void;
 }
 
-export default function PDFViewer({ pdfUrl }: PDFViewerProps) {
-	const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
-	const [currentPage, setCurrentPage] = useState(1);
-	const [totalPages, setTotalPages] = useState(0);
-	const [isRendering, setIsRendering] = useState(false);
+/**
+ * PDFViewer component for rendering and paginating PDF files.
+ * Tracks analytics for document views and supports keyboard navigation.
+ *
+ * @param url                 - The signed URL of the PDF file.
+ * @param documentId          - The document's unique identifier.
+ * @param linkId              - (Optional) The link ID if viewing via a shared link.
+ * @param visitorId           - (Optional) The visitor's ID for analytics.
+ * @param skipAnalytics       - If true, disables analytics tracking.
+ * @param enableKeyboardPaging- If true, enables left/right arrow key navigation.
+ * @param maxViewHeight       - The maximum height of the viewer.
+ * @param onReady             - Callback when the PDF is fully loaded or fails.
+ * @param onMount             - Callback when the component is mounted.
+ * @returns The rendered PDF viewer component.
+ */
+export default function PDFViewer({
+	url,
+	documentId,
+	linkId,
+	visitorId,
+	skipAnalytics = false,
+	enableKeyboardPaging = true,
+	maxViewHeight,
+	onReady,
+	onMount,
+}: PDFViewerProps) {
+	const [numPages, setNumPages] = useState<number>();
+	const [page, setPage] = useState<number | null>(null);
+	const logged = useRef(false); // ensures single VIEW row
+	const analytics = useCreateDocumentAnalyticsMutation();
 
-	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const [error, setError] = useState<Error | null>(null);
 
-	// Load PDF once
+	// Call onMount callback when component mounts
 	useEffect(() => {
-		const loadPdf = async () => {
-			const loadingTask = pdfjsLib.getDocument(pdfUrl);
-			const pdfDocument = await loadingTask.promise;
-			setPdf(pdfDocument);
-			setTotalPages(pdfDocument.numPages);
-		};
-		loadPdf();
-	}, [pdfUrl]);
+		onMount?.();
+	}, [onMount]);
 
-	// Render current page whenever pdf or currentPage changes
+	// Keyboard navigation for paging
 	useEffect(() => {
-		if (!pdf || isRendering) return;
+		if (!enableKeyboardPaging || !numPages) return;
 
-		const renderPage = async () => {
-			setIsRendering(true);
-			try {
-				const page = await pdf.getPage(currentPage);
-				const viewport = page.getViewport({ scale: 1, rotation: 0 });
-				const canvas = canvasRef.current;
-
-				if (canvas) {
-					const context = canvas.getContext('2d');
-					if (context) {
-						canvas.width = viewport.width;
-						canvas.height = viewport.height;
-						await page.render({
-							canvasContext: context,
-							viewport,
-						}).promise;
-					}
-				}
-			} catch (error) {
-				console.error('Error rendering PDF page:', error);
-			} finally {
-				setIsRendering(false);
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'ArrowLeft' && page && page > 1) {
+				setPage(page - 1);
+			}
+			if (e.key === 'ArrowRight' && page && page < numPages) {
+				setPage(page + 1);
 			}
 		};
 
-		renderPage();
-	}, [pdf, currentPage, isRendering]);
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [enableKeyboardPaging, page, numPages]);
 
-	const handleNextPage = () => {
-		if (currentPage < totalPages) {
-			setCurrentPage((prev) => prev + 1);
-		}
-	};
-
-	const handlePrevPage = () => {
-		if (currentPage > 1) {
-			setCurrentPage((prev) => prev - 1);
-		}
+	/**
+	 * Tracks a file view event for analytics, only once per session.
+	 */
+	const trackFileView = () => {
+		if (logged.current || skipAnalytics) return;
+		analytics.mutateAsync({
+			documentId,
+			documentLinkId: linkId ?? '',
+			eventType: AnalyticsEventType.VIEW,
+			visitorId,
+		});
+		logged.current = true;
 	};
 
 	return (
-		<Box
-			display='flex'
-			flexDirection='column'
-			alignItems='center'>
-			<canvas ref={canvasRef} />
+		<>
 			<Box
-				mt={2}
 				display='flex'
+				flexDirection='column'
 				alignItems='center'
-				gap={2}>
-				<Button
-					variant='outlined'
-					disabled={currentPage === 1}
-					onClick={handlePrevPage}>
-					Previous
-				</Button>
-				<Typography variant='body1'>
-					Page {currentPage} of {totalPages}
-				</Typography>
-				<Button
-					variant='outlined'
-					disabled={currentPage === totalPages}
-					onClick={handleNextPage}>
-					Next
-				</Button>
+				maxHeight={`calc(100vh - ${maxViewHeight ?? '245px'})`}
+				mx='auto'
+				my={4}
+				px={2}
+				tabIndex={0}
+				sx={{
+					border: 1,
+					borderColor: 'divider',
+					borderRadius: 2,
+					boxShadow: 2,
+					overflowY: 'auto',
+				}}>
+				<Document
+					file={url}
+					onLoadSuccess={({ numPages }) => {
+						setNumPages(numPages);
+						setPage(1);
+						trackFileView();
+						onReady?.();
+					}}
+					loading={null}
+					onLoadError={(e) => {
+						setError(e);
+						onReady?.();
+					}}
+					error={
+						<Typography
+							color='error'
+							align='center'
+							py={4}>
+							{error?.message || 'Failed to load PDF'}
+						</Typography>
+					}>
+					{page && (
+						<Page
+							pageNumber={page}
+							width={780}
+							renderTextLayer={false}
+							renderAnnotationLayer={false}
+						/>
+					)}
+				</Document>
 			</Box>
-		</Box>
+			{numPages && numPages > 1 && page && (
+				<Paginator
+					size='sm'
+					nextPage={page}
+					totalPages={numPages}
+					pageSize={1}
+					totalItems={numPages}
+					onPageChange={setPage}
+				/>
+			)}
+		</>
 	);
 }

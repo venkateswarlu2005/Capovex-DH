@@ -10,7 +10,7 @@ import {
 	Typography,
 } from '@mui/material';
 
-import { authService } from '@/app/api/_services/authService';
+import { authService } from '@/services/auth/authService';
 
 import { BackgroundIcon, CheckCircleIcon } from '@/icons';
 
@@ -31,7 +31,7 @@ export default async function DocumentsPage() {
 		try {
 			documentCount = await prisma.document.count({
 				where: {
-					user_id: userId,
+					userId,
 				},
 			});
 		} catch (error) {

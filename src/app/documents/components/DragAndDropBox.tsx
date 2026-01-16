@@ -1,14 +1,18 @@
 'use client';
 
-import { useCallback } from 'react';
-import { Box, Button } from '@mui/material';
 import { useSession } from 'next-auth/react';
-import { useDropzone } from 'react-dropzone';
 import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+
+import { Box, Button } from '@mui/material';
 
 import { FilePlusIcon } from '@/icons';
-import { useModal, useToast, useUploadDocument } from '@/hooks';
-import { ModalWrapper } from '@/components';
+
+import { useToast } from '@/hooks';
+import { useCreateDocumentMutation } from '@/hooks/data';
+
+import { useModalContext } from '@/providers/modal/ModalProvider';
 
 interface DragAndDropBoxProps {
 	text: string;
@@ -21,11 +25,29 @@ const DragAndDropBox = ({
 	height = { sm: 150, md: 200, lg: 250 },
 	documentCount,
 }: DragAndDropBoxProps) => {
-	const { isOpen, openModal, closeModal } = useModal();
+	const { openModal } = useModalContext();
 	const { showToast } = useToast();
 	const { data: session } = useSession();
-	const uploadDocument = useUploadDocument();
+	const uploadDocument = useCreateDocumentMutation();
 	const router = useRouter();
+
+	// TODO: Future enhancement - Replace direct file upload with modal file picker
+	// This function will open a modal allowing up to 5 files to be selected.
+	// const handleUpload = () => {
+	// 	openModal({
+	// 		type: 'uploadFile',
+	// 		contentProps: {
+	// 			description: 'Select up to 5 files to upload',
+	// 			onUploadComplete: () => {
+	// 				console.log('File uploaded successfully!');
+	// 				showToast({
+	// 					message: 'File uploaded successfully!',
+	// 					variant: 'success',
+	// 				});
+	// 			},
+	// 		},
+	// 	});
+	// };
 
 	const handleUploadSuccess = useCallback(() => {
 		showToast({ message: 'File uploaded successfully!', variant: 'success' });
@@ -34,7 +56,7 @@ const DragAndDropBox = ({
 		if (!documentCount) {
 			router.refresh();
 		}
-	}, [showToast]);
+	}, [showToast, documentCount, router]);
 
 	const handleUploadError = useCallback(
 		(msg?: string, status?: string) => {
@@ -71,7 +93,7 @@ const DragAndDropBox = ({
 			} finally {
 			}
 		},
-		[session, handleUploadError, handleUploadSuccess],
+		[session, handleUploadError, handleUploadSuccess, uploadDocument],
 	);
 
 	const onDrop = useCallback(
@@ -116,18 +138,6 @@ const DragAndDropBox = ({
 					/>
 					<Button color='secondary'>{text}</Button>
 				</Box>
-
-				{/* Modal Wrapper */}
-				{/* <ModalWrapper
-					variant='upload'
-					dialogContentVariant='body2'
-					title='Upload file(s)'
-					description='Select up to 5 files to upload'
-					confirmButtonText='Upload'
-					toggleModal={closeModal}
-					open={isOpen}
-					onClose={handleUploadFile}
-				/> */}
 			</div>
 		</>
 	);
