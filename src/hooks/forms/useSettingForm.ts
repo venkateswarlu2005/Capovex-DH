@@ -33,7 +33,7 @@ export function useSettingForm(
 } {
 	/* Build default values by merging Zod-generated defaults with API data */
 	const defaults: UpdateBrandingSettingFormValues = {
-		primaryColor: '#1570EF',
+		primaryColor: '#ED7D22',
 		themePreset: null as ThemePreset | null,
 		bgPreset: 'plain' as BgPreset,
 		showPersonalInfo: false,

@@ -303,7 +303,7 @@ export default function ProfileForm() {
 								href='mailto:dev.datahall@gmail.com'
 								underline='hover'
 								color='primary'>
-								dev.datahall@gmail.com
+								mocherlavenkateswarlu55@gmail.com
 							</Link>
 							.
 						</Typography>

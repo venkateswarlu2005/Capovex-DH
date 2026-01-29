@@ -16,37 +16,42 @@ import {
 import neutralTheme from './globalTheme';
 
 /* -------------------------------------------------------------------------- */
-/* 1 · Brand palette values                                                   */
+/* 1 · Brand palette values (CAPOVEX)                                         */
 /* -------------------------------------------------------------------------- */
 
-const BW_BLUE = '#1570EF'; // primary / info
-const BW_BLUE_HOVER = '#175CD3';
-const BW_MENU_SHADOW = '0px 12px 16px -4px rgba(16,24,40,0.08)';
+const CAPOVEX_ORANGE = '#ED7D22'; // primary / info
+const CAPOVEX_ORANGE_HOVER = '#D66F1E';
+const CAPOVEX_MENU_SHADOW = '0px 12px 16px -4px rgba(16,24,40,0.08)';
 
 /* Clone neutral tokens and overwrite vivid keys */
-const text = { ...neutralText, brand: BW_BLUE, notes: '#A1AFC6' };
+const text = { ...neutralText, brand: CAPOVEX_ORANGE, notes: '#A1AFC6' };
 
 const background = {
 	...neutralBackground,
-	primary: BW_BLUE,
-	content: '#fcfcfd',
-	alt: '#c1cee0',
-	secondaryButton: '#e2e8f0',
-};
-const hover = {
-	...neutralHover,
-	primary: BW_BLUE_HOVER,
-	tertiary: '#1570ef0a',
-	secondary: '#e4ebf5f0',
-	alt: '#edeff25f',
+	primary: CAPOVEX_ORANGE,
+	content: '#FCFCFD',
+	alt: '#C1CEE0',
+	secondaryButton: '#E2E8F0',
 };
 
-const alert = { ...neutralAlert, info: BW_BLUE, infoLight: '#F5F9FF' };
+const hover = {
+	...neutralHover,
+	primary: CAPOVEX_ORANGE_HOVER,
+	tertiary: '#ED7D220A',
+	secondary: '#E4EBF5F0',
+	alt: '#EDEFF25F',
+};
+
+const alert = {
+	...neutralAlert,
+	info: CAPOVEX_ORANGE,
+	infoLight: '#FFF4EB',
+};
 
 const disabled = {
 	...neutralDisabled,
-	primary: '#a6cbff',
-	error: '#f5aaa6',
+	primary: '#F1B37A',
+	error: '#F5AAA6',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -55,18 +60,19 @@ const disabled = {
 
 const mainTheme = createTheme(neutralTheme, {
 	palette: {
-		primary: { main: BW_BLUE },
+		primary: { main: CAPOVEX_ORANGE },
 		secondary: { main: background.secondary },
-		info: { main: BW_BLUE },
+		info: { main: CAPOVEX_ORANGE },
 		text,
 		background,
 		action: {
 			disabledBackground: disabled.secondary,
 			hover: hover.tertiary,
-			selected: makeAlpha(BW_BLUE, 0.12),
+			selected: makeAlpha(CAPOVEX_ORANGE, 0.12),
 		},
 	},
-	/* expose vivid token objects for brand creators */
+
+	/* expose vivid token objects */
 	text,
 	background,
 	hover,
@@ -83,50 +89,67 @@ const mainTheme = createTheme(neutralTheme, {
 					backgroundColor: theme.palette.primary.main,
 					color: theme.palette.common.white,
 					border: `1px solid ${theme.palette.primary.main}`,
-					'&:hover': { backgroundColor: BW_BLUE_HOVER, borderColor: BW_BLUE_HOVER },
+					'&:hover': {
+						backgroundColor: CAPOVEX_ORANGE_HOVER,
+						borderColor: CAPOVEX_ORANGE_HOVER,
+					},
 					'&.Mui-disabled': {
 						backgroundColor: disabled.primary,
 						borderColor: disabled.primary,
 						color: theme.palette.common.white,
 					},
 				}),
+
 				containedSecondary: ({ theme }: { theme: Theme }) => ({
 					backgroundColor: theme.palette.background.secondary,
 					color: theme.palette.text.secondary,
 					border: `1px solid ${neutralBorder.light}`,
-					'&:hover': { backgroundColor: hover.tertiary, borderColor: hover.tertiary },
+					'&:hover': {
+						backgroundColor: hover.tertiary,
+						borderColor: hover.tertiary,
+					},
 					'&.Mui-disabled': {
 						backgroundColor: disabled.secondary,
 						color: text.notes,
 						borderColor: disabled.secondary,
 					},
 				}),
+
 				containedError: ({ theme }: { theme: Theme }) => ({
 					backgroundColor: theme.palette.error.main,
 					color: theme.palette.common.white,
 					border: `1px solid ${theme.palette.error.main}`,
-					'&:hover': { backgroundColor: hover.error, borderColor: hover.error },
+					'&:hover': {
+						backgroundColor: hover.error,
+						borderColor: hover.error,
+					},
 					'&.Mui-disabled': {
 						backgroundColor: disabled.error,
 						borderColor: disabled.error,
 						color: theme.palette.common.white,
 					},
 				}),
+
 				outlinedSecondary: ({ theme }: { theme: Theme }) => ({
 					color: theme.palette.text.secondary,
 					backgroundColor: theme.palette.background.fill ?? theme.palette.common.white,
 					border: `1px solid ${neutralBorder.light}`,
-					'&:hover': { backgroundColor: theme.palette.background.secondary },
+					'&:hover': {
+						backgroundColor: theme.palette.background.secondary,
+					},
 					'&.Mui-disabled': {
 						backgroundColor: disabled.secondary,
 						color: text.notes,
 						borderColor: disabled.secondary,
 					},
 				}),
+
 				textSecondary: ({ theme }: { theme: Theme }) => ({
 					color: theme.palette.text.primary,
 					backgroundColor: 'transparent',
-					'&:hover': { backgroundColor: hover.tertiary },
+					'&:hover': {
+						backgroundColor: hover.tertiary,
+					},
 					'&.Mui-disabled': {
 						backgroundColor: disabled.secondary,
 						color: text.notes,
@@ -137,7 +160,7 @@ const mainTheme = createTheme(neutralTheme, {
 		},
 
 		/* ---------------------------------------------------------------------- */
-		/* Chip – vivid border                                                    */
+		/* Chip                                                                   */
 		/* ---------------------------------------------------------------------- */
 		MuiChip: {
 			styleOverrides: {
@@ -145,21 +168,24 @@ const mainTheme = createTheme(neutralTheme, {
 					backgroundColor: theme.palette.background.secondary,
 					color: theme.palette.text.primary,
 					border: `1.5px solid ${theme.border.light}`,
-					'& .MuiChip-icon': { color: theme.palette.text.notes, marginRight: 2 },
+					'& .MuiChip-icon': {
+						color: theme.palette.text.notes,
+						marginRight: 2,
+					},
 				}),
 			},
 		},
 
 		/* ---------------------------------------------------------------------- */
-		/* Menu – selected state uses primary blue                                */
+		/* Menu                                                                   */
 		/* ---------------------------------------------------------------------- */
 		MuiMenu: {
 			styleOverrides: {
 				paper: {
-					boxShadow: BW_MENU_SHADOW,
+					boxShadow: CAPOVEX_MENU_SHADOW,
 					'& .MuiMenu-list li.Mui-selected': {
-						color: neutralTheme.palette.common.white,
-						backgroundColor: BW_BLUE,
+						color: '#FFFFFF',
+						backgroundColor: CAPOVEX_ORANGE,
 					},
 				},
 			},
@@ -171,8 +197,12 @@ const mainTheme = createTheme(neutralTheme, {
 					backgroundColor: 'inherit',
 					color: theme.palette.text.secondary,
 					minWidth: 100,
-					'&:hover': { backgroundColor: `${hover.tertiary} !important` },
-					'&.Mui-selected:hover': { backgroundColor: `${hover.primary} !important` },
+					'&:hover': {
+						backgroundColor: `${hover.tertiary} !important`,
+					},
+					'&.Mui-selected:hover': {
+						backgroundColor: `${hover.primary} !important`,
+					},
 					[theme.breakpoints.up('sm')]: { fontSize: '0.7rem' },
 					[theme.breakpoints.up('md')]: { fontSize: '0.75rem' },
 					[theme.breakpoints.up('lg')]: { fontSize: '0.8rem' },
@@ -181,7 +211,7 @@ const mainTheme = createTheme(neutralTheme, {
 		},
 
 		/* ---------------------------------------------------------------------- */
-		/* Pagination selected dot                                                */
+		/* Pagination                                                             */
 		/* ---------------------------------------------------------------------- */
 		MuiPaginationItem: {
 			styleOverrides: {
@@ -189,14 +219,16 @@ const mainTheme = createTheme(neutralTheme, {
 					'&.Mui-selected': {
 						backgroundColor: theme.palette.background.alt,
 						color: theme.palette.text.primary,
-						'&:hover': { backgroundColor: theme.palette.background.alt },
+						'&:hover': {
+							backgroundColor: theme.palette.background.alt,
+						},
 					},
-					'&:hover': { backgroundColor: hover.secondary },
+					'&:hover': {
+						backgroundColor: hover.secondary,
+					},
 				}),
 			},
 		},
-
-		/* Additional vivid overrides can be added here as needed … */
 	},
 });
 

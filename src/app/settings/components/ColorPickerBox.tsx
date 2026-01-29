@@ -1,27 +1,32 @@
 import { useState } from 'react';
 import { SketchPicker } from 'react-color';
-
 import { Box, Dialog, IconButton } from '@mui/material';
+import { useController, useFormContext } from 'react-hook-form';
 
 import { FormInput } from '@/components';
 import { UpdateBrandingSettingFormValues } from '@/hooks/forms';
-import { useFormContext } from 'react-hook-form';
 
 export default function ColorPickerBox({ disabled = false }: { disabled?: boolean }) {
 	const [showPicker, setShowPicker] = useState(false);
 
-	const { setValue, watch, register } = useFormContext<UpdateBrandingSettingFormValues>();
+	const { control } = useFormContext<UpdateBrandingSettingFormValues>();
 
-	const primaryColor = watch('primaryColor') ?? '#1570EF'; // Default to Bluewave blue if not set
+	const {
+		field: { value, onChange },
+	} = useController({
+		name: 'primaryColor',
+		control,
+	});
 
-	const handleColorChange = (newColor: any) => {
-		setValue('primaryColor', newColor.hex, { shouldDirty: true });
-		setValue('themePreset', null, { shouldDirty: true }); // clears preset
+	// true source of truth
+	const primaryColor = value ?? '#ED7D22';
+
+	const togglePicker = () => {
+		if (!disabled) setShowPicker((p) => !p);
 	};
 
-	//Open and close a color picker
-	const togglePicker = () => {
-		setShowPicker(!showPicker);
+	const handleColorChange = (newColor: any) => {
+		onChange(newColor.hex); // updates RHF correctly
 	};
 
 	return (
@@ -43,35 +48,30 @@ export default function ColorPickerBox({ disabled = false }: { disabled?: boolea
 					border: 1,
 					borderRadius: 2,
 					p: 5,
-					'&:hover': {
-						bgcolor: primaryColor,
-					},
+					'&:hover': { bgcolor: primaryColor },
 				}}
-				onClick={() => {
-					if (!disabled) togglePicker();
-				}}></IconButton>
+				onClick={togglePicker}
+			/>
+
 			<FormInput
 				minWidth={120}
 				fullWidth={false}
-				{...register('primaryColor')}
 				value={primaryColor}
 				disabled={disabled}
+				onChange={(e) => onChange(e.target.value)}
 				sx={{
 					'& .MuiInputBase-input': { py: 0 },
-					'& .MuiOutlinedInput-root': {
-						'& fieldset': {
-							border: 'none',
-						},
+					'& .MuiOutlinedInput-root fieldset': {
+						border: 'none',
 					},
 				}}
 			/>
+
 			<Dialog
 				onClose={togglePicker}
 				open={showPicker}
 				sx={{
-					'& .MuiPaper-root': {
-						minWidth: 200,
-					},
+					'& .MuiPaper-root': { minWidth: 200 },
 				}}>
 				<SketchPicker
 					color={primaryColor}

@@ -11,10 +11,12 @@ const rootDir = path.resolve(__dirname, '..');
 const envDir = path.join(rootDir, 'env');
 const outputEnvPath = path.join(rootDir, '.env');
 
+// ✅ NEW: root .env.local (important for Prisma)
+const rootEnvLocalPath = path.join(rootDir, '.env.local');
+
 function loadEnv(filePath) {
 	if (!fs.existsSync(filePath)) return {};
-	const result = dotenv.parse(fs.readFileSync(filePath));
-	return result;
+	return dotenv.parse(fs.readFileSync(filePath));
 }
 
 function mergeEnvs(...envObjects) {
@@ -25,6 +27,7 @@ function writeEnvFile(envObj, targetPath) {
 	const contents = Object.entries(envObj)
 		.map(([key, val]) => `${key}="${val.replace(/"/g, '\\"')}"`)
 		.join('\n');
+
 	fs.writeFileSync(targetPath, contents);
 	console.log(`✅ Generated .env from DEPLOYMENT_ENVIRONMENT=${DEPLOYMENT_ENV}`);
 }
@@ -36,15 +39,21 @@ function run() {
 		case 'production':
 			envConfig = loadEnv(path.join(envDir, '.env.production'));
 			break;
+
 		case 'development':
 			envConfig = loadEnv(path.join(envDir, '.env.development'));
 			break;
+
 		case 'local':
-		default:
+		default: {
 			const dev = loadEnv(path.join(envDir, '.env.development'));
 			const local = loadEnv(path.join(envDir, '.env.local'));
-			envConfig = mergeEnvs(dev, local); // local overrides dev
+			const rootLocal = loadEnv(rootEnvLocalPath); // ✅ NEW
+
+			// priority: dev < env/local < root .env.local
+			envConfig = mergeEnvs(dev, local, rootLocal);
 			break;
+		}
 	}
 
 	writeEnvFile(envConfig, outputEnvPath);

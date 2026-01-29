@@ -184,7 +184,7 @@ export default function BrandingSetting() {
 				autoComplete='off'>
 				<Box mb={{ sm: 12, md: 14, lg: 16 }}>
 					<Typography variant='subtitle2'>
-						Customize how your brand appears to the public across DataHall documents your visitors
+						Customize how your brand appears to the public across Capovex documents your visitors
 						see.
 					</Typography>
 				</Box>
@@ -208,7 +208,7 @@ export default function BrandingSetting() {
 								<label htmlFor='logo-upload'>
 									<AvatarCard
 										alt='Logo'
-										initials='BU'
+										initials='CIL'
 										src={logoPreviewUrl || undefined}
 										size={86}
 									/>

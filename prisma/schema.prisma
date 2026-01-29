@@ -96,7 +96,7 @@ model Document {
   size       Int
   createdAt  DateTime @default(now()) @db.Timestamptz(6)
   updatedAt  DateTime @updatedAt @db.Timestamptz(6)
-
+  category   DocumentCategory 
   user          User                @relation(fields: [userId], references: [userId], onDelete: Cascade)
   documentLinks DocumentLink[]
   analytics     DocumentAnalytics[]
@@ -227,4 +227,17 @@ model SystemSetting {
   allowedMimeTypes    String? // CSV list
   createdAt           DateTime @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime @updatedAt @db.Timestamptz(6)
+}
+enum DocumentCategory {
+  EXECUTIVE_OVERVIEW
+  FOUNDERS_MANAGEMENT
+  LEGAL
+  CAP_TABLE
+  FINANCIALS
+  BUSINESS_PRODUCT
+  REVENUE_CONTRACTS
+  IP_TECHNOLOGY
+  COMPLIANCE
+  HUMAN_RESOURCES
+  RISKS_LITIGATION
 }
