@@ -1,303 +1,261 @@
 import prisma from '@/lib/prisma';
 import {
-	ServiceError,
-	statsService,
-	storageService,
-	systemSettingService,
+  ServiceError,
+  statsService,
+  storageService,
+  systemSettingService,
 } from '@/services';
 
 import {
-	SIGNED_URL_TTL,
-	STORAGE_BUCKET,
+  SIGNED_URL_TTL,
+  STORAGE_BUCKET,
 } from '@/shared/config/storageConfig';
+import { UserRole } from '@/shared/enums';
+import { Prisma } from '@prisma/client';
 
 /* -------------------------------------------------------------------------- */
-/*  Types                                                                     */
+/* Types                                                                     */
 /* -------------------------------------------------------------------------- */
 
-type GetUserDocumentsOptions = {
-	category?: string;
-	isAdmin?: boolean;
+type UserContext = {
+  id: string;
+  role: UserRole;
+  departmentId?: string | null;
+};
+
+type GetDocumentsFilters = {
+  categoryId?: string;
+  departmentId?: string; // For Master Admin filtering
 };
 
 /* -------------------------------------------------------------------------- */
-/*  Document Service                                                          */
+/* Document Service                                                          */
 /* -------------------------------------------------------------------------- */
 
 export const documentService = {
-	/**
-	 * Retrieves documents for a user.
-	 * - Admin: sees ALL documents
-	 * - User: sees only their documents
-	 * - Optional category filtering for both
-	 */
-	async getUserDocuments(
-		userId: string,
-		options?: GetUserDocumentsOptions,
-	) {
-		const where: any = {};
+  /**
+   * Retrieves documents based on RBAC hierarchy.
+   */
+  async getUserDocuments(
+    user: UserContext,
+    filters?: GetDocumentsFilters,
+  ) {
+    const where: Prisma.DocumentWhereInput = {};
 
-		// 🔒 Non-admin users see only their documents
-		if (!options?.isAdmin) {
-			where.userId = userId;
-		}
+    // 1. APPLY FILTERS (If provided)
+    if (filters?.categoryId) {
+      where.categoryId = filters.categoryId;
+    }
 
-		// 📂 Category filter (Admin + User)
-		if (options?.category) {
-			where.category = options.category;
-		}
+    // 2. APPLY RBAC SCOPE
+    if (user.role === UserRole.MasterAdmin) {
+      // Master Admin sees ALL.
+      // Optional: Filter by specific department if requested
+      if (filters?.departmentId) {
+        where.category = { departmentId: filters.departmentId };
+      }
+    }
+    else if (user.role === UserRole.DeptAdmin) {
+      // Dept Admin sees:
+      // A. Everything in their own Department
+      // B. Any categories in other departments they were explicitly granted access to
+      where.OR = [
+        { category: { departmentId: user.departmentId } },
+        { category: { accessList: { some: { userId: user.id } } } }
+      ];
+    }
+    else {
+      // Dept User & View Only:
+      // See ONLY categories they are explicitly assigned to
+      where.category = {
+        accessList: {
+          some: { userId: user.id }
+        }
+      };
+    }
 
-		const docs = await prisma.document.findMany({
-			where,
-			select: {
-				documentId: true,
-				fileName: true,
-				filePath: true,
-				fileType: true,
-				size: true,
-				createdAt: true,
-				updatedAt: true,
-				user: {
-					select: {
-						firstName: true,
-						lastName: true,
-					},
-				},
-			},
-			orderBy: { createdAt: 'desc' },
-		});
+    // Execute Query
+    const docs = await prisma.document.findMany({
+      where,
+      select: {
+        documentId: true,
+        fileName: true,
+        filePath: true,
+        fileType: true,
+        size: true,
+        createdAt: true,
+        updatedAt: true,
+        categoryId: true,
+        category: {
+          select: { name: true, department: { select: { name: true } } }
+        },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-		const statsArray = await Promise.all(
-			docs.map((d) =>
-				statsService.getQuickStatsForDocument(d.documentId),
-			),
-		);
+    // Fetch Stats (keeping your existing pattern)
+    const statsArray = await Promise.all(
+      docs.map((d) =>
+        statsService.getQuickStatsForDocument(d.documentId),
+      ),
+    );
 
-		return docs.map((doc, idx) => ({
-			documentId: doc.documentId,
-			fileName: doc.fileName,
-			filePath: doc.filePath,
-			fileType: doc.fileType,
-			size: doc.size,
-			createdAt: doc.createdAt.toISOString(),
-			updatedAt: doc.updatedAt.toISOString(),
-			uploader: {
-				name: `${doc.user.firstName} ${doc.user.lastName}`,
-				avatar: null,
-			},
-			stats: statsArray[idx],
-		}));
-	},
+    // Map to Response
+    return docs.map((doc, idx) => ({
+      documentId: doc.documentId,
+      fileName: doc.fileName,
+      filePath: doc.filePath,
+      fileType: doc.fileType,
+      size: doc.size,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+      categoryName: doc.category?.name || 'Uncategorized',
+      departmentName: doc.category?.department?.name || 'General',
+      uploader: {
+        name: `${doc.user.firstName} ${doc.user.lastName}`,
+        avatar: null,
+      },
+      stats: statsArray[idx],
+    }));
+  },
 
-	/**
-	 * Creates a new document record for the given user.
-	 */
-	async createDocument({
-		userId,
-		fileName,
-		filePath,
-		fileType,
-		size,
-	}: {
-		userId: string;
-		fileName: string;
-		filePath: string;
-		fileType: string;
-		size: number;
-	}) {
-		return prisma.document.create({
-			data: {
-				userId,
-				fileName,
-				filePath,
-				fileType,
-				size,
-			},
-		});
-	},
+  /**
+   * Creates a new document record.
+   */
+  async createDocument({
+    userId,
+    fileName,
+    filePath,
+    fileType,
+    size,
+    categoryId,
+  }: {
+    userId: string;
+    fileName: string;
+    filePath: string;
+    fileType: string;
+    size: number;
+    categoryId?: string;
+  }) {
+    return prisma.document.create({
+      data: {
+        userId,
+        fileName,
+        filePath,
+        fileType,
+        size,
+        categoryId,
+      },
+    });
+  },
 
-	/**
-	 * Fetches a single document by its ID, ensuring it belongs to the user.
-	 */
-	async getDocumentById(userId: string, documentId: string) {
-		const doc = await prisma.document.findFirst({
-			where: { documentId, userId },
-			select: {
-				documentId: true,
-				fileName: true,
-				filePath: true,
-				fileType: true,
-				size: true,
-				createdAt: true,
-				updatedAt: true,
-				user: {
-					select: {
-						firstName: true,
-						lastName: true,
-					},
-				},
-			},
-		});
+  /**
+   * Fetches a single document by its ID.
+   * NOTE: This needs security checks in the Controller/Route before returning!
+   */
+  async getDocumentById(documentId: string) {
+    const doc = await prisma.document.findUnique({
+      where: { documentId },
+      include: {
+        user: { select: { firstName: true, lastName: true } },
+        category: true,
+      }
+    });
 
-		if (!doc) return null;
+    if (!doc) return null;
 
-		const stats = await statsService.getQuickStatsForDocument(documentId);
+    const stats = await statsService.getQuickStatsForDocument(documentId);
 
-		return {
-			documentId: doc.documentId,
-			fileName: doc.fileName,
-			filePath: doc.filePath,
-			fileType: doc.fileType,
-			size: doc.size,
-			createdAt: doc.createdAt.toISOString(),
-			updatedAt: doc.updatedAt.toISOString(),
-			uploader: {
-				name: `${doc.user.firstName} ${doc.user.lastName}`,
-				avatar: null,
-			},
-			stats,
-		};
-	},
+    return {
+      ...doc,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+      uploader: {
+        name: `${doc.user.firstName} ${doc.user.lastName}`,
+      },
+      stats,
+    };
+  },
 
-	/**
-	 * Updates a document's file name if owned by the user.
-	 */
-	async updateDocument(
-		userId: string,
-		documentId: string,
-		data: { fileName?: string },
-	) {
-		const existingDoc = await prisma.document.findUnique({
-			where: { documentId },
-		});
+  /**
+   * Updates a document's file name.
+   */
+  async updateDocument(
+    documentId: string,
+    data: { fileName?: string },
+  ) {
+    return prisma.document.update({
+      where: { documentId },
+      data: {
+        fileName: data.fileName,
+      },
+    });
+  },
 
-		if (!existingDoc || existingDoc.userId !== userId) {
-			return null;
-		}
+  /**
+   * Deletes a document and its file from storage.
+   */
+  async deleteDocument(documentId: string) {
+    const document = await prisma.document.findUnique({
+      where: { documentId },
+    });
 
-		return prisma.document.update({
-			where: { documentId },
-			data: {
-				fileName: data.fileName ?? existingDoc.fileName,
-			},
-		});
-	},
+    if (!document) return null;
 
-	/**
-	 * Deletes a document and its file from storage if owned by the user.
-	 */
-	async deleteDocument(userId: string, documentId: string) {
-		const document = await prisma.document.findUnique({
-			where: { documentId },
-		});
+    const deletedDoc = await prisma.document.delete({
+      where: { documentId },
+    });
 
-		if (!document || document.userId !== userId) {
-			return null;
-		}
+    await storageService.deleteFile(deletedDoc.filePath);
 
-		const deletedDoc = await prisma.document.delete({
-			where: { documentId },
-		});
+    return deletedDoc;
+  },
 
-		await storageService.deleteFile(deletedDoc.filePath);
+  /**
+   * Generates a signed URL.
+   */
+  async getSignedUrl(
+    filePath: string,
+  ): Promise<string> {
+    return storageService.generateSignedUrl(
+      filePath,
+      SIGNED_URL_TTL,
+      STORAGE_BUCKET,
+    );
+  },
 
-		return deletedDoc;
-	},
+  /**
+   * Validates file type and size.
+   */
+  async validateUploadFile(file: File) {
+    const { maxFileSizeMb, allowedMimeTypes } =
+      await systemSettingService.getUploadLimits();
 
-	/**
-	 * Retrieves all visitors who accessed any link under this document.
-	 */
-	async getDocumentVisitors(userId: string, documentId: string) {
-		const doc = await prisma.document.findFirst({
-			where: { documentId, userId },
-			include: { documentLinks: true },
-		});
+    const whitelist = (allowedMimeTypes ?? []).filter(Boolean);
 
-		if (!doc) return null;
+    if (whitelist.length && !whitelist.includes(file.type)) {
+      throw new ServiceError(
+        `INVALID_FILE_TYPE: ${file.type} is not allowed`,
+        400,
+      );
+    }
 
-		const linkIds = doc.documentLinks.map(
-			(l) => l.documentLinkId,
-		);
+    const fileSizeMB = file.size / (1024 * 1024);
+    const limit = maxFileSizeMb ?? 10; // Default 10MB if not set
 
-		if (!linkIds.length) return [];
-
-		return prisma.documentLinkVisitor.findMany({
-			where: {
-				documentLinkId: { in: linkIds },
-			},
-			orderBy: { updatedAt: 'desc' },
-		});
-	},
-
-	/**
-	 * Verifies document ownership.
-	 */
-	async verifyOwnership(userId: string, documentId: string): Promise<void> {
-		const document = await prisma.document.findFirst({
-			where: { documentId, userId },
-			select: { documentId: true },
-		});
-
-		if (!document) {
-			throw new ServiceError(
-				'Document not found or access denied.',
-				404,
-			);
-		}
-	},
-
-	/**
-	 * Generates a signed URL for document owner.
-	 */
-	async getSignedUrlForOwner(
-		userId: string,
-		documentId: string,
-	): Promise<string> {
-		const doc = await prisma.document.findFirst({
-			where: { documentId, userId },
-			select: { filePath: true },
-		});
-
-		if (!doc) {
-			throw new ServiceError(
-				'Document not found or access denied.',
-				404,
-			);
-		}
-
-		return storageService.generateSignedUrl(
-			doc.filePath,
-			SIGNED_URL_TTL,
-			STORAGE_BUCKET,
-		);
-	},
-
-	/**
-	 * Validates file type and size.
-	 */
-	async validateUploadFile(file: File) {
-		const { maxFileSizeMb, allowedMimeTypes } =
-			await systemSettingService.getUploadLimits();
-
-		const whitelist = (allowedMimeTypes ?? []).filter(Boolean);
-
-		if (whitelist.length && !whitelist.includes(file.type)) {
-			throw new ServiceError(
-				`INVALID_FILE_TYPE: ${file.type} is not allowed`,
-				400,
-			);
-		}
-
-		const fileSizeMB = file.size / (1024 * 1024);
-		const limit = maxFileSizeMb ?? 1;
-
-		if (fileSizeMB > limit) {
-			throw new ServiceError(
-				`FILE_TOO_LARGE: ${fileSizeMB.toFixed(
-					2,
-				)}MB exceeds limit of ${limit}MB`,
-				413,
-			);
-		}
-	},
+    if (fileSizeMB > limit) {
+      throw new ServiceError(
+        `FILE_TOO_LARGE: ${fileSizeMB.toFixed(
+          2,
+        )}MB exceeds limit of ${limit}MB`,
+        413,
+      );
+    }
+  },
 };

@@ -10,10 +10,12 @@ export enum UserStatus {
 	Unverified = 'UNVERIFIED',
 }
 
+// UPDATED: The 4 new roles
 export enum UserRole {
-	Admin = 'ADMIN',
-	User = 'USER',
-	Guest = 'GUEST',
+	MasterAdmin = 'MASTER_ADMIN',
+	DeptAdmin = 'DEPT_ADMIN',
+	DeptUser = 'DEPT_USER',
+	ViewOnlyUser = 'VIEW_ONLY_USER',
 }
 
 export enum AnalyticsEventType {

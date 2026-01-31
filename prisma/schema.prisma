@@ -8,65 +8,21 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Temporary disabled ArchivedUser model - Can re-enable later when we have Delete User functionality
-// model ArchivedUser {
-//   id         Int      @id @default(autoincrement())
-//   userId    String   @unique @default(uuid())
-//   first_name String   @default("")
-//   last_name  String   @default("")
-//   email      String   @unique @default("")
-//   password   String
-//   created_at DateTime @default(now()) @db.Timestamptz(6)
-//   role       UserRole @default(USER)
-//   address    String?  @default("")
-// }
+// ==========================================
+// 1. ROLES & ENUMS
+// ==========================================
 
-/**
- * ---------------------------  Auth & Users  ---------------------------
- */
-
-model PasswordResetToken {
-  id        Int       @id @default(autoincrement())
-  token     String    @unique @default(uuid())
-  createdAt DateTime  @default(now()) @db.Timestamptz(6)
-  resetAt   DateTime? @db.Timestamptz(6)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [userId])
-
-  @@index([userId])
-}
-
-model User {
-  id                Int          @id @default(autoincrement())
-  userId            String       @unique
-  authProvider      AuthProvider @default(CREDENTIALS)
-  auth0Sub          String?      @unique
-  firstName         String       @default("")
-  lastName          String       @default("")
-  email             String       @unique @db.VarChar(320)
-  password          String?
-  avatarUrl         String? // Supabase path; e.g. "assets/{userId}/avatar/12345.png"
-  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
-  role              UserRole     @default(USER)
-  status            Status       @default(UNVERIFIED)
-  verificationToken String?
-  tokenExpiresAt    DateTime?
-  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
-
-  // relations
-  passwordResetTokens PasswordResetToken[]
-  documents           Document[]
-  documentLinks       DocumentLink[]
-  brandingSetting     BrandingSetting?
-
-  @@index([email])
+enum Role {
+  MASTER_ADMIN     // God mode
+  DEPT_ADMIN       // Admin of a specific Department
+  DEPT_USER        // Employee in a Department
+  VIEW_ONLY_USER   // External or limited viewer
 }
 
 enum AuthProvider {
   CREDENTIALS
   AUTH0
-  GOOGLE // future expansion
+  GOOGLE
 }
 
 enum Status {
@@ -75,62 +31,281 @@ enum Status {
   UNVERIFIED
 }
 
-enum UserRole {
-  USER
-  ADMIN
-  MEMBER // future Teams expansion
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-/**
- * ---------------------------  Documents  ---------------------------
- */
+enum RequestType {
+  CREATE_CATEGORY
+  ACCESS_DOCUMENT
+  OTHER
+}
+
+enum ActivityType {
+  LOGIN
+  UPLOAD_FILE
+  DELETE_FILE
+  CREATE_CATEGORY
+  APPROVE_REQUEST
+  REJECT_REQUEST
+  SEND_MESSAGE
+}
+
+// This was missing previously!
+enum AnalyticsEventType {
+  VIEW
+  DOWNLOAD
+}
+
+enum DocumentCategory {
+  EXECUTIVE_OVERVIEW
+  FOUNDERS_MANAGEMENT
+  LEGAL
+  CAP_TABLE
+  FINANCIALS
+  BUSINESS_PRODUCT
+  REVENUE_CONTRACTS
+  IP_TECHNOLOGY
+  COMPLIANCE
+  HUMAN_RESOURCES
+  RISKS_LITIGATION
+  OTHER
+}
+
+// ==========================================
+// 2. CORE USER & AUTH
+// ==========================================
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique @default(uuid())
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  resetAt   DateTime? @db.Timestamptz(6)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model User {
+  id                String       @id @default(cuid())
+  userId            String       @unique @default(uuid()) // Legacy field
+
+  email             String       @unique @db.VarChar(320)
+  firstName         String       @default("")
+  lastName          String       @default("")
+  password          String?
+  avatarUrl         String?
+
+  // -- Auth --
+  role              Role         @default(VIEW_ONLY_USER)
+  status            Status       @default(UNVERIFIED)
+  authProvider      AuthProvider @default(CREDENTIALS)
+  auth0Sub          String?      @unique
+  verificationToken String?
+  tokenExpiresAt    DateTime?
+
+  // -- Department Logic --
+  departmentId      String?
+  department        Department?  @relation(fields: [departmentId], references: [id])
+
+  // -- Granular Permissions --
+  categoryAccess    UserCategoryAccess[]
+
+  // -- Relations --
+  documents         Document[]
+  documentLinks     DocumentLink[]
+  brandingSetting   BrandingSetting?
+  passwordResetTokens PasswordResetToken[]
+
+  // -- Requests Workflow --
+  requestsMade      Request[]    @relation("UserRequests")
+  requestsManaged   Request[]    @relation("UserApprovals")
+
+  // -- Chat & Activity --
+  messagesSent      Message[]
+  activityLogs      ActivityLog[]
+
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(6)
+
+  @@index([email])
+  @@index([departmentId])
+}
+
+// ==========================================
+// 3. ORGANIZATION STRUCTURE (New)
+// ==========================================
+
+model Department {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+
+  users       User[]
+  categories  Category[]
+  chats       ChatChannel[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  documents    Document[]
+  accessList   UserCategoryAccess[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([name, departmentId])
+}
+
+// Join table for granular access
+model UserCategoryAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  categoryId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  canUpload  Boolean  @default(false)
+  canDelete  Boolean  @default(false)
+
+  @@unique([userId, categoryId])
+}
+
+// ==========================================
+// 4. WORKFLOWS: REQUESTS & ACTIVITY
+// ==========================================
+
+model Request {
+  id          String        @id @default(cuid())
+  type        RequestType
+  status      RequestStatus @default(PENDING)
+
+  // Data payload (e.g. { "categoryName": "Invoices" })
+  details     Json?
+
+  requesterId String
+  requester   User          @relation("UserRequests", fields: [requesterId], references: [id])
+
+  approverId  String?
+  approver    User?         @relation("UserApprovals", fields: [approverId], references: [id])
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  action      ActivityType
+  details     String
+  metadata    Json?
+
+  createdAt   DateTime     @default(now())
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ==========================================
+// 5. DOCUMENTS (Updated)
+// ==========================================
 
 model Document {
   id          Int      @id @default(autoincrement())
   documentId  String   @unique @default(uuid())
-  userId      String
+
   fileName    String
   filePath    String   @db.Text
   fileType    String
   size        Int
-  createdAt   DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
-  
-  // This uses the Enum defined below
-  category    DocumentCategory  @default(OTHER) 
-  
-  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Link to the new Category model
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  // Legacy Enum
+  categoryEnum DocumentCategory @default(OTHER) @map("category")
+
   documentLinks DocumentLink[]
   analytics     DocumentAnalytics[]
 
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
   @@index([userId])
+  @@index([categoryId])
 }
 
-/**
- * ---------------------------  Sharing Links  ---------------------------
- */
+// ==========================================
+// 6. CHAT SYSTEM (New)
+// ==========================================
+
+model ChatChannel {
+  id           String     @id @default(cuid())
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // If null, it's the general "Dept Room" chat. If set, it's a private chat for that viewer.
+  viewerUserId String?
+
+  messages     Message[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Message {
+  id          String      @id @default(cuid())
+  content     String      @db.Text
+
+  senderId    String
+  sender      User        @relation(fields: [senderId], references: [id])
+
+  channelId   String
+  channel     ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime    @default(now())
+}
+
+// ==========================================
+// 7. EXTERNAL LINKS & ANALYTICS (Existing)
+// ==========================================
 
 model DocumentLink {
-  id              Int       @id @default(autoincrement())
-  documentLinkId  String    @unique
-  documentId      String
+  id              Int      @id @default(autoincrement())
+  documentLinkId  String   @unique
+  documentId      String // Reference to Document.documentId (UUID)
+  document        Document @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+
   createdByUserId String
-  alias           String? // friendly name (optional)
+  creator         User     @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  alias           String?
   isPublic        Boolean   @default(false)
   expirationTime  DateTime?
   password        String?
   visitorFields   Json
+
+  visitors        DocumentLinkVisitor[]
+  analytics       DocumentAnalytics[]
+
   createdAt       DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @db.Timestamptz(6)
 
-  // relations
-  document  Document              @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
-  creator   User                  @relation(fields: [createdByUserId], references: [userId], onDelete: Cascade)
-  visitors  DocumentLinkVisitor[]
-  analytics DocumentAnalytics[]
-
-  // constraints & indexes
-  @@unique([documentId, alias], name: "document_alias_unique") // Composite uniqueness: alias must be unique only within its document
+  @@unique([documentId, alias], name: "document_alias_unique")
   @@index([documentId])
   @@index([createdByUserId])
 }
@@ -138,6 +313,8 @@ model DocumentLink {
 model DocumentLinkVisitor {
   id              Int      @id @default(autoincrement())
   documentLinkId  String
+  documentLink    DocumentLink @relation(fields: [documentLinkId], references: [documentLinkId], onDelete: Cascade)
+
   firstName       String   @default("")
   lastName        String   @default("")
   email           String   @default("") @db.VarChar(320)
@@ -145,57 +322,49 @@ model DocumentLinkVisitor {
   visitedAt       DateTime @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
-  documentLink DocumentLink        @relation(fields: [documentLinkId], references: [documentLinkId], onDelete: Cascade)
-  analytics    DocumentAnalytics[]
+  analytics       DocumentAnalytics[]
 
   @@index([documentLinkId, visitedAt])
 }
 
-/**
- * ---------------------------  Document Analytics  ---------------------------
- */
 model DocumentAnalytics {
   id             Int                @id @default(autoincrement())
   documentId     String
+  document       Document           @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
+
   documentLinkId String?
+  documentLink   DocumentLink?      @relation(fields: [documentLinkId], references: [documentLinkId], onDelete: Cascade)
+
   visitorId      Int?
+  visitor        DocumentLinkVisitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
   eventType      AnalyticsEventType
   meta           Json?
   timestamp      DateTime           @default(now()) @db.Timestamptz(6)
-  minuteBucket   DateTime           @default(dbgenerated("date_trunc('minute', now())")) @db.Timestamptz(6) // ⬅️  rounds to the minute for de-duplication
+  minuteBucket   DateTime           @default(dbgenerated("date_trunc('minute', now())")) @db.Timestamptz(6)
 
-  // relations
-  visitor      DocumentLinkVisitor? @relation(fields: [visitorId], references: [id], onDelete: Cascade)
-  document     Document             @relation(fields: [documentId], references: [documentId], onDelete: Cascade)
-  documentLink DocumentLink?        @relation(fields: [documentLinkId], references: [documentLinkId], onDelete: Cascade)
-
-  // constraints & indexes
   @@unique([visitorId, documentLinkId, eventType, minuteBucket])
   @@index([documentId, eventType])
   @@index([documentLinkId, eventType])
 }
 
-enum AnalyticsEventType {
-  VIEW
-  DOWNLOAD
-}
+// ==========================================
+// 8. SETTINGS (Existing)
+// ==========================================
 
-/**
- * ---------------------------  Branding & Layout settings  ---------------------------
- */
 model BrandingSetting {
   userId           String       @id
-  logoUrl          String? // Supabase path; e.g. "assets/{userId}/logo/12345.png"
-  displayName      String? // Optional “John Doe”
-  primaryColor     String       @default("#1570EF") // Hex; used when themePreset = NULL
-  themePreset      ThemePreset? // lavender | midnight | aqua | blossom | graphite | sunset | mint
-  bgPreset         BgPreset     @default(plain) // plain | soft | dark
-  showPersonalInfo Boolean      @default(false) // Toggle avatar  name in header
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  logoUrl          String?
+  displayName      String?
+  primaryColor     String       @default("#1570EF")
+  themePreset      ThemePreset?
+  bgPreset         BgPreset     @default(plain)
+  showPersonalInfo Boolean      @default(false)
+
   createdAt        DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime     @updatedAt @db.Timestamptz(6)
-
-  // relations
-  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 enum ThemePreset {
@@ -214,33 +383,17 @@ enum BgPreset {
   dark
 }
 
-/**
- * ---------------------------  System settings  ---------------------------
- */
 model SystemSetting {
-  id                  Int      @id @default(1)
+  id                 Int      @id @default(1)
   enableNotifications Boolean  @default(false)
-  brevoApiKeyEnc      String? // AES-256-GCM ciphertext
+  brevoApiKeyEnc      String?
   emailFromName       String?
   emailFromAddr       String?
-  defaultTtlSeconds   Int      @default(86400) // 24 h
+  defaultTtlSeconds   Int      @default(86400)
   debugLogs           Boolean  @default(false)
   maxFileSizeMb       Int?
-  allowedMimeTypes    String? // CSV list
+  allowedMimeTypes    String?
+
   createdAt           DateTime @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime @updatedAt @db.Timestamptz(6)
-}
-enum DocumentCategory {
-  EXECUTIVE_OVERVIEW
-  FOUNDERS_MANAGEMENT
-  LEGAL
-  CAP_TABLE
-  FINANCIALS
-  BUSINESS_PRODUCT
-  REVENUE_CONTRACTS
-  IP_TECHNOLOGY
-  COMPLIANCE
-  HUMAN_RESOURCES
-  RISKS_LITIGATION
-  OTHER 
 }
