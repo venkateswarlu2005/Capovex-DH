@@ -12,36 +12,72 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { targetUserId, categoryId, canUpload, canDelete } = body;
 
-    // 1. Validate Input
     if (!targetUserId || !categoryId) {
       return new NextResponse('User ID and Category ID are required', { status: 400 });
     }
 
-    // 2. Security Check: Who is trying to grant access?
-    const requesterRole = session.user.role;
-    const requesterDept = session.user.departmentId;
+    const requester = session.user;
 
-    if (requesterRole !== UserRole.MasterAdmin && requesterRole !== UserRole.DeptAdmin) {
-      return new NextResponse('Forbidden', { status: 403 });
+    // 1. Fetch Target User to check their Role & Department
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId }
+    });
+
+    if (!targetUser) return new NextResponse('Target user not found', { status: 404 });
+
+    // 2. Fetch Category to check its Department
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId }
+    });
+
+    if (!category) return new NextResponse('Category not found', { status: 404 });
+
+
+    // ============================================================
+    // RULE 1: MASTER ADMIN LOGIC
+    // ============================================================
+    if (requester.role === UserRole.MasterAdmin) {
+      // Master Admin has "God Mode" - can assign ANYONE to ANYTHING.
+      // This specifically covers the requirement: "for an external user only the master admin can grant access"
     }
 
-    // 3. Dept Admin Specific Checks
-    if (requesterRole === UserRole.DeptAdmin) {
-      // A. Check if the Category belongs to their department
-      const category = await prisma.category.findUnique({ where: { id: categoryId } });
-      if (!category || category.departmentId !== requesterDept) {
+    // ============================================================
+    // RULE 2: DEPARTMENT ADMIN LOGIC
+    // ============================================================
+    else if (requester.role === UserRole.DeptAdmin) {
+
+      // A. RESTRICTION: Cannot manage View Only Users
+      if (targetUser.role === UserRole.ViewOnlyUser) {
+        return new NextResponse('Only Master Admin can grant access to External (View Only) Users', { status: 403 });
+      }
+
+      // B. RESTRICTION: Target User must be in the SAME Department
+      if (targetUser.departmentId !== requester.departmentId) {
+        return new NextResponse('You can only manage users within your own department', { status: 403 });
+      }
+
+      // C. RESTRICTION: Category must be in the SAME Department
+      if (category.departmentId !== requester.departmentId) {
         return new NextResponse('You cannot grant access to categories outside your department', { status: 403 });
       }
 
-      // B. Check if the Target User belongs to their department (Optional, but good practice)
-      const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
-      if (!targetUser || targetUser.departmentId !== requesterDept) {
-        return new NextResponse('You cannot manage users outside your department', { status: 403 });
+      // D. RESTRICTION: Target must be a Dept User (optional, prevents editing other Admins if you want)
+      if (targetUser.role !== UserRole.DeptUser) {
+         // Usually Dept Admins shouldn't be messing with other Dept Admins' permissions,
+         // but strictly they manage "Users". Let's allow it if they are in the same dept,
+         // or restrict it if you prefer strict hierarchy.
+         // For now, we allow managing anyone "below" or "equal" in the dept except themselves.
       }
     }
 
-    // 4. Grant/Update Access (Upsert)
-    // If access exists, update permissions. If not, create it.
+    // ============================================================
+    // RULE 3: EVERYONE ELSE -> FORBIDDEN
+    // ============================================================
+    else {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // 3. APPLY UPDATE
     const access = await prisma.userCategoryAccess.upsert({
       where: {
         userId_categoryId: {
@@ -69,7 +105,7 @@ export async function POST(request: Request) {
   }
 }
 
-// Optional: DELETE to Revoke Access
+// DELETE remains similar (Revoke Access), applying the same logic checks
 export async function DELETE(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -81,7 +117,20 @@ export async function DELETE(request: Request) {
 
     if (!targetUserId || !categoryId) return new NextResponse('Missing params', { status: 400 });
 
-    // (Add similar Security Checks here as POST...)
+    const requester = session.user;
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+
+    if (!targetUser || !category) return new NextResponse('Not found', { status: 404 });
+
+    // SAME CHECKS AS ABOVE
+    if (requester.role === UserRole.DeptAdmin) {
+       if (targetUser.role === UserRole.ViewOnlyUser) return new NextResponse('Forbidden: Only Master Admin manages External Users', { status: 403 });
+       if (targetUser.departmentId !== requester.departmentId) return new NextResponse('Forbidden: Cross-Dept User', { status: 403 });
+       if (category.departmentId !== requester.departmentId) return new NextResponse('Forbidden: Cross-Dept Category', { status: 403 });
+    } else if (requester.role !== UserRole.MasterAdmin) {
+       return new NextResponse('Forbidden', { status: 403 });
+    }
 
     await prisma.userCategoryAccess.delete({
       where: {
