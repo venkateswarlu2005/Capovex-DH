@@ -112,7 +112,7 @@ export default function MasterAdminOverviewPage() {
   };
 
   const fetchRequests = async () => {
-    const res = await fetch('/api/request', { cache: 'no-store' });
+    const res = await fetch('/api/requests', { cache: 'no-store' });
     if (res.ok) setRequests(await res.json());
     else setRequests([]);
   };
@@ -156,19 +156,28 @@ export default function MasterAdminOverviewPage() {
     fetchAllData();
   };
 
-  const updateRequestStatus = async (requestId: string, status: 'APPROVED' | 'REJECTED') => {
-    const res = await fetch(`/api/request/${requestId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+const updateRequestStatus = async (
+  requestId: string,
+  status: 'APPROVED' | 'REJECTED'
+) => {
+  const res = await fetch(`/api/requests/${requestId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
 
-    if (res.ok) {
-      fetchAllData();
-    } else {
-      console.error('Failed to update request');
-    }
-  };
+  const text = await res.text();
+
+  if (!res.ok) {
+    console.error('Failed to update request');
+    console.error('STATUS:', res.status);
+    console.error('RESPONSE:', text);
+    return;
+  }
+
+  fetchAllData();
+};
+
 
   return (
     <Box sx={{ p: 6 }}>

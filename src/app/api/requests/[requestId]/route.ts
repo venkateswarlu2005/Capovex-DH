@@ -7,24 +7,24 @@ import { RequestStatus, RequestType, ActivityType } from '@prisma/client';
 
 export async function PUT(
   request: Request,
-  { params }: { params: { requestId: string } }
+  context: { params: Promise<{ requestId: string }> }
 ) {
   try {
+    // ✅ NEXT 15 FIX
+    const { requestId } = await context.params;
+
     const session = await getServerSession(authOptions);
-    // Only Master Admin can approve requests (for now)
+
     if (!session || session.user.role !== UserRole.MasterAdmin) {
       return new NextResponse('Unauthorized', { status: 403 });
     }
 
-    const { requestId } = params;
-    const body = await request.json();
-    const { status } = body; // 'APPROVED' or 'REJECTED'
+    const { status } = await request.json();
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
       return new NextResponse('Invalid status', { status: 400 });
     }
 
-    // 1. Fetch the Request
     const existingRequest = await prisma.request.findUnique({
       where: { id: requestId },
     });
@@ -34,39 +34,46 @@ export async function PUT(
     }
 
     if (existingRequest.status !== RequestStatus.PENDING) {
-      return new NextResponse('Request is already processed', { status: 400 });
+      return new NextResponse('Request already processed', { status: 400 });
     }
 
-    // 2. Handle Logic based on Type (e.g., CREATE_CATEGORY)
+    /* -------------------- APPROVE LOGIC -------------------- */
     if (status === 'APPROVED') {
       if (existingRequest.type === RequestType.CREATE_CATEGORY) {
-        const details = existingRequest.details as any;
+        const details = existingRequest.details as {
+          categoryName?: string;
+          departmentId?: string;
+        } | null;
 
-        // Check if category already exists to avoid errors
+        // ✅ SAFETY GUARD (CRITICAL)
+        if (!details?.categoryName || !details?.departmentId) {
+          return new NextResponse(
+            'Invalid CREATE_CATEGORY request (missing details)',
+            { status: 400 }
+          );
+        }
+
         const duplicate = await prisma.category.findUnique({
           where: {
             name_departmentId: {
               name: details.categoryName,
-              departmentId: details.departmentId
-            }
-          }
+              departmentId: details.departmentId,
+            },
+          },
         });
 
         if (!duplicate) {
-          // Perform the Action: Create the Category
           await prisma.category.create({
             data: {
               name: details.categoryName,
               departmentId: details.departmentId,
-            }
+            },
           });
         }
       }
-
-      // Future: Add logic here for RequestType.ACCESS_DOCUMENT
     }
 
-    // 3. Update Request Status
+    /* -------------------- UPDATE STATUS -------------------- */
     const updatedRequest = await prisma.request.update({
       where: { id: requestId },
       data: {
@@ -75,18 +82,20 @@ export async function PUT(
       },
     });
 
-    // 4. Log Activity
+    /* -------------------- ACTIVITY LOG -------------------- */
     await prisma.activityLog.create({
       data: {
         userId: session.user.id,
-        action: status === 'APPROVED' ? ActivityType.APPROVE_REQUEST : ActivityType.REJECT_REQUEST,
+        action:
+          status === 'APPROVED'
+            ? ActivityType.APPROVE_REQUEST
+            : ActivityType.REJECT_REQUEST,
         details: `${status} request for ${existingRequest.type}`,
-        metadata: { requestId: updatedRequest.id }
-      }
+        metadata: { requestId },
+      },
     });
 
     return NextResponse.json(updatedRequest);
-
   } catch (error) {
     console.error('Error processing request:', error);
     return new NextResponse('Internal Error', { status: 500 });
