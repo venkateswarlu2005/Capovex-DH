@@ -30,3 +30,14 @@ export enum LoadPhase {
 	Pdf = 'pdf',
 	Done = 'done',
 }
+export enum RequestStatus {
+	PENDING = 'PENDING',
+	APPROVED = 'APPROVED',
+	REJECTED = 'REJECTED',
+}
+
+export enum RequestType {
+	CREATE_CATEGORY = 'CREATE_CATEGORY',
+	ACCESS_DOCUMENT = 'ACCESS_DOCUMENT',
+	OTHER = 'OTHER',
+}
