@@ -2,212 +2,287 @@
 
 import { useRouter } from 'next/navigation';
 import { FormProvider } from 'react-hook-form';
+import Image from 'next/image';
 import {
-	Box,
-	Typography,
-	Paper,
-	Checkbox,
-	Divider,
+  Box,
+  Typography,
+  Paper,
+  Checkbox,
+  Divider,
+  Stack,
+  Link as MuiLink,
 } from '@mui/material';
 import ShieldIcon from '@mui/icons-material/Shield';
+import { useSession } from 'next-auth/react';
 
 import { FormInput, LoadingButton, NavLink } from '@/components';
-import AuthFormWrapper from '../components/AuthFormWrapper';
-
 import { useAuthQueryToasts, useSignInMutation } from '@/hooks/data';
 import { useFormSubmission, useSignInForm } from '@/hooks/forms';
-import Image from 'next/image';
+import { UserRole } from '@/shared/enums';
 
 export default function SignIn() {
-	useAuthQueryToasts();
-	const router = useRouter();
+  useAuthQueryToasts();
 
-	const form = useSignInForm();
-	const {
-		register,
-		formState: { errors, isValid },
-	} = form;
+  const router = useRouter();
+  const { data: session, status, update: refreshSession } = useSession();
 
-	const signInMutation = useSignInMutation();
+  const form = useSignInForm();
+  const {
+    register,
+    formState: { errors, isValid },
+  } = form;
 
-	const { loading, handleSubmit } = useFormSubmission({
-		mutation: signInMutation,
-		getVariables: () => form.getValues(),
-		validate: () => isValid,
-		successMessage: 'Successfully signed in! Redirecting…',
-		onSuccess: () => router.push('/documents'),
-	});
+  const signInMutation = useSignInMutation();
 
-	return (
-		<AuthFormWrapper>
-			<Box
-				display="flex"
-				minHeight="100vh"
-				flexDirection={{ xs: 'column', md: 'row' }}
-			>
-				{/* ================= LEFT PANEL ================= */}
-				<Box
-					flex={{ md: 5 }}
-					px={{ xs: 14, md: 28 }}
-					display="flex"
-					flexDirection="column"
-					justifyContent="center"
-				>
-					{/* Logo */}
-					<Box display="flex" alignItems="center" gap={7} mb={20}>
+  const { loading, handleSubmit } = useFormSubmission({
+    mutation: signInMutation,
+    getVariables: () => form.getValues(),
+    validate: () => isValid,
+    successMessage: 'Successfully signed in! Redirecting…',
 
-<Box>
-	<Image
-		src="/branding/capovex-logo.png"
-		alt="Capovex Institutional"
-		width={480}
-		height={220}
-		priority
-		style={{ height: 'auto', width: 'auto' }}
-	/>
-</Box>
+    // ✅ Must be zero-argument function
+    onSuccess: async () => {
+      // Refresh next-auth session
+      await refreshSession();
 
-					</Box>
+      const role = session?.user?.role;
 
-					<Typography
-						fontSize={84}
-						fontWeight={900}
-						mb={4}
-					>
-						DataRoom
-					</Typography>
+      if (role === UserRole.MasterAdmin) {
+        router.push('/m_admin/overview');
+      } else {
+        router.push('/documents');
+      }
+    },
+  });
 
-					<Typography
-						fontSize={33}
-						color="text.secondary"
-						mb={18}
-					>
-						Secure Enterprise Login
-					</Typography>
+  const PRIMARY_ORANGE = '#F36C24';
 
-					<Box
-						display="inline-flex"
-						alignItems="center"
-						gap={5}
-						px={9}
-						py={4.5}
-						borderRadius={20}
-						border="2px solid"
-						borderColor="divider"
-						width="fit-content"
-					>
-						<ShieldIcon color="warning" sx={{ fontSize: 44 }} />
-						<Typography
-							fontSize={18}
-							letterSpacing="0.3em"
-							fontWeight={900}
-						>
-							256-BIT AES ENCRYPTION
-						</Typography>
-					</Box>
+    return (
+        <Box
+            display="flex"
+            minHeight="100vh"
+            flexDirection={{ xs: 'column', md: 'row' }}
+            
+            sx={{ background: 'linear-gradient(135deg, #F9F9F9 0%, #F5F1EB 100%)' }}
+        >
+            {/* ================= LEFT PANEL (Updated Padding & Spacing) ================= */}
+            <Box
+                flex={{ md: 4 }}
+                
+                pl={{ xs: 10, md: 20, lg: 30 }} 
+                display="flex"
+                flexDirection="column"
+                justifyContent="center"
+                alignItems="center"
+                textAlign="center"
+            >
+                <Box maxWidth={900}>
+                    {/* Header Group */}
+                    <Box mb={6} display="flex" justifyContent="center" alignItems="center" gap={2}>
+                        <Image 
+                            src="/branding/logo.svg" 
+                            alt="Logo" 
+                            width={45} 
+                            height={45} 
+                            style={{ objectFit: 'contain' }}
+                        />
+                        <Box textAlign="left">
+                            <Typography 
+                                variant="h1" 
+                                fontWeight={900} 
+                                color={PRIMARY_ORANGE} 
+                                lineHeight={1}
+                            >
+                                Dataroom
+                            </Typography>
+                            <Typography 
+                                variant="subtitle1" 
+                                color="text.secondary" 
+                                fontStyle="italic"
+                                lineHeight={1}
+                            >
+                                Secure Enterprise Login
+                            </Typography>
+                        </Box>
+                    </Box>
 
-					<Box mt={22}>
-						<Typography fontSize={22} color="text.secondary">
-							Secure login powered by <b>Data Hall</b>
-						</Typography>
-					</Box>
-				</Box>
+                    {/* Disclaimer */}
+                    <Typography 
+                       fontSize="3rem"
+  color="text.secondary"
+  lineHeight={1.7}
+  paragraph
+  mb={6}
+                    >
+                        This is a private, secure virtual data room (VDR) belonging to Capovex Research & Analytics Pvt Ltd. Access is restricted to authorized users only. All activities, file views, and downloads are monitored and logged. Unauthorized access or misuse of this system is strictly prohibited and may result in legal action. By logging in, you agree to the confidentiality terms governing this project.
+                    </Typography>
 
-				{/* ================= RIGHT PANEL ================= */}
-				<Box
-					flex={{ md: 6 }}
-					display="flex"
-					alignItems="center"
-					justifyContent="center"
-					px={{ xs: 14, md: 28 }}
-				>
-					<Paper
-						elevation={18}
-						sx={{
-							width: '100%',
-							maxWidth: 920,
-							p: 14,
-							borderRadius: 8,
-						}}
-					>
-						<FormProvider {...form}>
-							<Box
-								component="form"
-								onSubmit={handleSubmit}
-								noValidate
-								display="flex"
-								flexDirection="column"
-								gap={10}
-							>
-								<FormInput
-									label="Email Address"
-									type="email"
-									placeholder="name@company.com"
-									{...register('email')}
-									errorMessage={errors.email?.message}
-								/>
+                    {/* Encryption Badge */}
+                    <Box display="flex" justifyContent="center" mb={10}>
+                        <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1.5}
+                            px={4}
+                            py={3}
+                            borderRadius={50}
+                            border={`1px solid ${PRIMARY_ORANGE}`}
+                            bgcolor="#FFF5F0"
+                        >
+                            <ShieldIcon sx={{ color: PRIMARY_ORANGE }} />
+                            <Typography
+                                fontSize={14}
+                                fontWeight={700}
+                                color={PRIMARY_ORANGE}
+                                letterSpacing="0.05em"
+                            >
+                                256-BIT AES ENCRYPTION
+                            </Typography>
+                        </Box>
+                    </Box>
 
-								<FormInput
-									label="Password"
-									type="password"
-									placeholder="••••••••"
-									{...register('password')}
-									errorMessage={errors.password?.message}
-								/>
+                    {/* Footer - With Increased Spacing */}
+                    <Box display="flex" flexDirection="column" alignItems="center">
+<Typography
+  fontSize="1rem"
+  color="text.secondary"
+  mb={1}
+>
+  Powered by
+</Typography>
 
-								<Box
-									display="flex"
-									justifyContent="space-between"
-									alignItems="center"
-								>
-									<Box display="flex" alignItems="center">
-										<Checkbox size="large" />
-										<Typography fontSize={26}>
-											Remember this device
-										</Typography>
-									</Box>
+                        <Box mb={4}>
+                            <Image
+                                src="/branding/capovex-logo.png"
+                                alt="Capovex"
+                                width={140}
+                                height={60}
+                                style={{ objectFit: 'contain' }}
+                            />
+                        </Box>
+                        
+                      
+<Stack
+  direction="row"
+  sx={{
+    gap: '5rem',
+    mt: '2rem',
+  }}
+>
+  {['Privacy Policy', 'Terms of Service', 'Support'].map((text) => (
+    <MuiLink
+      key={text}
+      href="#"
+      underline="hover"
+      color={PRIMARY_ORANGE}
+      fontSize="1rem"
+      fontWeight={500}
+    >
+      {text}
+    </MuiLink>
+  ))}
+</Stack>
 
-									<NavLink
-										href="/auth/forgot-password"
-										linkText="Forgot password?"
-										fontSize={22}
-									/>
-								</Box>
+                    </Box>
+                </Box>
+            </Box>
 
-								<LoadingButton
-									type="submit"
-									loading={loading}
-									disabled={!isValid}
-									buttonText="Secure Sign In"
-									loadingText="Signing in..."
-									sx={{
-										py: 4,
-										fontSize: 26,
-										borderRadius: 6,
-										fontWeight: 900,
-									}}
-								/>
+            {/* ================= RIGHT PANEL (Untouched) ================= */}
+            <Box
+                flex={{ md: 6 }}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                pr={{ xs: 14, md: 28 }}
+            >
+                <Paper
+                    elevation={18}
+                    sx={{
+                        width: '50%',
+                        maxWidth: 500,
+                        p: 14,
+                        borderRadius: 8,
+                    }}
+                >
+                    <FormProvider {...form}>
+                        <Box
+                            component="form"
+                            onSubmit={handleSubmit}
+                            noValidate
+                            display="flex"
+                            flexDirection="column"
+                            gap={10}
+                        >
+                            <FormInput
+                                label="Email Address"
+                                type="email"
+                                placeholder="name@company.com"
+                                {...register('email')}
+                                errorMessage={errors.email?.message}
+                            />
 
-								<Divider sx={{ my: 5 }} />
+                            <FormInput
+                                label="Password"
+                                type="password"
+                                placeholder="••••••••"
+                                {...register('password')}
+                                errorMessage={errors.password?.message}
+                            />
 
-								<Typography
-									textAlign="center"
-									fontSize={26}
-								>
-									Don&apos;t have an account?{' '}
-									<NavLink
-										href="/auth/sign-up"
-										linkText="Sign up"
-										display="inline-flex"
-										fontWeight={900}
-										fontSize={26}
-									/>
-								</Typography>
-							</Box>
-						</FormProvider>
-					</Paper>
-				</Box>
-			</Box>
-		</AuthFormWrapper>
-	);
+                            <Box
+                                display="flex"
+                                justifyContent="space-between"
+                                alignItems="center"
+                            >
+                                <Box display="flex" alignItems="center">
+                                    <Checkbox size="large" />
+                                    <Typography fontSize={26}>
+                                        Remember this device
+                                    </Typography>
+                                </Box>
+
+                                <NavLink
+                                    href="/auth/forgot-password"
+                                    linkText="Forgot password?"
+                                    fontSize={22}
+                                />
+                            </Box>
+
+                            <LoadingButton
+                                type="submit"
+                                loading={loading}
+                                disabled={!isValid}
+                                buttonText="Secure Sign In"
+                                loadingText="Signing in..."
+                                sx={{
+                                    py: 4,
+                                    fontSize: 26,
+                                    borderRadius: 6,
+                                    fontWeight: 900,
+                                    bgcolor: PRIMARY_ORANGE,
+                                    '&:hover': { bgcolor: '#D95218' }
+                                }}
+                            />
+
+                            <Divider sx={{ my: 5 }} />
+
+                            <Typography
+                                textAlign="center"
+                                fontSize={26}
+                            >
+                                Don&apos;t have an account?{' '}
+                                <NavLink
+                                    href="/auth/sign-up"
+                                    linkText="Sign up"
+                                    display="inline-flex"
+                                    fontWeight={900}
+                                    fontSize={26}
+                                />
+                            </Typography>
+                        </Box>
+                    </FormProvider>
+                </Paper>
+            </Box>
+        </Box>
+    );
 }
