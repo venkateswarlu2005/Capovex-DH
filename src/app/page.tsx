@@ -1,12 +1,18 @@
 import { redirect } from 'next/navigation';
-export default function Home() {
-	redirect('/documents');
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/authOptions"; // Adjust path if needed
+import { UserRole } from '@/shared/enums';
+
+export default async function Home() {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+        redirect('/auth/sign-in');
+    }
+
+    if (session.user.role === UserRole.MasterAdmin) {
+        redirect('/m_admin/overview');
+    }
+
+    redirect('/documents');
 }
-export const metadata = {
-	title: 'Documents',
-	description: 'Documents page',
-};
-export const dynamic = 'force-dynamic'; // Revalidate every time
-export const revalidate = 0; // Revalidate every time
-export const fetchCache = 'force-no-store'; // Do not cache
-export const runtime = 'edge'; // Run on the edge

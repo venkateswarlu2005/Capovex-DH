@@ -10,11 +10,12 @@ export async function PUT(
   context: { params: Promise<{ requestId: string }> }
 ) {
   try {
-    // ✅ NEXT 15 FIX
+  
     const { requestId } = await context.params;
 
     const session = await getServerSession(authOptions);
 
+    // 1. Authorization Check
     if (!session || session.user.role !== UserRole.MasterAdmin) {
       return new NextResponse('Unauthorized', { status: 403 });
     }
@@ -25,6 +26,7 @@ export async function PUT(
       return new NextResponse('Invalid status', { status: 400 });
     }
 
+    // 2. Fetch the Request
     const existingRequest = await prisma.request.findUnique({
       where: { id: requestId },
     });
@@ -40,24 +42,30 @@ export async function PUT(
     /* -------------------- APPROVE LOGIC -------------------- */
     if (status === 'APPROVED') {
       if (existingRequest.type === RequestType.CREATE_CATEGORY) {
-        const details = existingRequest.details as {
-          categoryName?: string;
-          departmentId?: string;
-        } | null;
+        
+    
+        const details = existingRequest.details as any;
 
-        // ✅ SAFETY GUARD (CRITICAL)
-        if (!details?.categoryName || !details?.departmentId) {
+       
+        const categoryName = details?.categoryName || details?.name;
+        
+        const departmentId = details?.departmentId || details?.deptId || details?.department;
+
+        // Safety Guard
+        if (!categoryName || !departmentId) {
+          console.error("Failed to approve request. Missing details:", details);
           return new NextResponse(
             'Invalid CREATE_CATEGORY request (missing details)',
             { status: 400 }
           );
         }
 
+        // Check for duplicates using the resolved variables
         const duplicate = await prisma.category.findUnique({
           where: {
             name_departmentId: {
-              name: details.categoryName,
-              departmentId: details.departmentId,
+              name: categoryName,
+              departmentId: departmentId,
             },
           },
         });
@@ -65,15 +73,15 @@ export async function PUT(
         if (!duplicate) {
           await prisma.category.create({
             data: {
-              name: details.categoryName,
-              departmentId: details.departmentId,
+              name: categoryName,
+              departmentId: departmentId,
             },
           });
         }
       }
     }
 
-    /* -------------------- UPDATE STATUS -------------------- */
+    /* -------------------- UPDATE REQUEST STATUS -------------------- */
     const updatedRequest = await prisma.request.update({
       where: { id: requestId },
       data: {
@@ -82,7 +90,7 @@ export async function PUT(
       },
     });
 
-    /* -------------------- ACTIVITY LOG -------------------- */
+    /* -------------------- LOG ACTIVITY -------------------- */
     await prisma.activityLog.create({
       data: {
         userId: session.user.id,

@@ -183,7 +183,7 @@ const updateRequestStatus = async (
     <Box sx={{ p: 6 }}>
       {/* ==================== HEADER ==================== */}
       <Stack direction="row" justifyContent="space-between" mb={6}>
-        <Typography variant="h4" fontWeight={600}>
+        <Typography variant="h1" fontWeight={600}>
           Dashboard / Overview
         </Typography>
 
@@ -239,8 +239,8 @@ const updateRequestStatus = async (
           <Card sx={cardSx}>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" mb={3}>
-                <Typography variant="h6" fontWeight={600}>Department Overview</Typography>
-                <Button size="small" onClick={() => router.push('/admin/departments')}>
+                <Typography variant="h2" fontWeight={600}>Department Overview</Typography>
+                <Button size="small" onClick={() => router.push('/m_admin/departments')}>
                   View All Departments
                 </Button>
               </Stack>
@@ -253,7 +253,7 @@ const updateRequestStatus = async (
                           <IconButton size="small" sx={iconBubble('primary')}><MemoryOutlinedIcon /></IconButton>
                           <Box>
                             <Typography fontWeight={600}>{dept.name}</Typography>
-                            <Typography variant="caption">{dept._count?.documents ?? 0} Files</Typography>
+                            <Typography variant="caption">{dept._count?.categories ?? 0} Categories</Typography>
                           </Box>
                         </Stack>
                         <Typography variant="caption">Storage Used</Typography>
@@ -268,7 +268,7 @@ const updateRequestStatus = async (
 
           <Card sx={{ ...cardSx, mt: 4 }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} mb={3}>Recent Activity</Typography>
+              <Typography variant="h2" fontWeight={600} mb={3}>Recent Activity</Typography>
               <Stack spacing={3}>
                 {activities.map((item) => (
                   <Stack key={item.id} direction="row" spacing={2} alignItems="center">
@@ -289,7 +289,7 @@ const updateRequestStatus = async (
           <Card sx={cardSx}>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" mb={3}>
-                <Typography variant="h6" fontWeight={600}>Centralized Requests</Typography>
+                <Typography variant="h2" fontWeight={600}>Centralized Requests</Typography>
               </Stack>
               <Stack spacing={2}>
                 {requests.length === 0 && <Typography variant="caption" color="text.secondary">No pending requests</Typography>}
