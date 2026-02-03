@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 import {
   Box,
@@ -56,6 +57,7 @@ const mapRoleToDisplay = (dbRole: string) => {
 
 export default function DepartmentSlugPage() {
   const params = useParams();
+  const router = useRouter();   
   const slug = params?.slug ? String(params.slug) : '';
 
   const [isLoading, setIsLoading] = useState(true);
@@ -177,7 +179,15 @@ export default function DepartmentSlugPage() {
       {/* HEADER */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <Button startIcon={<ArrowBackIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'divider' }}>Back</Button>
+          <Button
+      startIcon={<ArrowBackIcon />}
+      variant="outlined"
+      size="small"
+      sx={{ color: 'text.secondary', borderColor: 'divider' }}
+      onClick={() => router.back()}
+    >
+      Back
+    </Button>
           <Box>
             <Typography variant="h2" color="text.secondary">
               DEPARTMENT /{' '}
