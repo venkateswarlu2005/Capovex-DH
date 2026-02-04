@@ -34,25 +34,29 @@ export default function ViewUserDocuments() {
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!categoryId) return;
-    
-    const fetchDocs = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/documents?categoryId=${categoryId}`);
-        const data = await res.json();
-        // 3. Match the property name returned by your GET API (it returns { documents: [...] })
-        setDocuments(data.documents || []);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchDocs = async () => {
+    setLoading(true);
+    try {
+      const url = categoryId
+        ? `/api/documents?categoryId=${categoryId}`
+        : `/api/documents?all=true`; 
 
-    fetchDocs();
-  }, [categoryId]);
+      const res = await fetch(url);
+      const data = await res.json();
+
+      setDocuments(data.documents || []);
+    } catch (err) {
+      console.error('Failed to fetch documents', err);
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDocs();
+}, [categoryId]);
+
 
   if (loading) {
     return (
