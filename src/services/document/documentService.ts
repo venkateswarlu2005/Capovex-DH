@@ -25,7 +25,7 @@ type UserContext = {
 
 type GetDocumentsFilters = {
   categoryId?: string;
-  departmentId?: string; // For Master Admin filtering
+  departmentId?: string;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -42,29 +42,20 @@ export const documentService = {
   ) {
     const where: Prisma.DocumentWhereInput = {};
 
-    // 1. APPLY FILTERS (If provided)
     if (filters?.categoryId) {
       where.categoryId = filters.categoryId;
     }
 
-    // 2. APPLY RBAC SCOPE
     if (user.role === UserRole.MasterAdmin) {
-      // Master Admin sees ALL.
-      // Optional: Filter by specific department if requested
       if (filters?.departmentId) {
         where.category = { departmentId: filters.departmentId };
       }
     }
     else if (user.role === UserRole.DeptAdmin) {
-      // Dept Admin sees:
-      // A. Any categories in other departments they were explicitly granted access to
-      // B. Everything in their own Department (if they have one assigned)
-      
       const adminConditions: Prisma.DocumentWhereInput[] = [
          { category: { accessList: { some: { userId: user.id } } } }
       ];
 
-      // FIX: Only add the department filter if the ID is a valid string
       if (user.departmentId) {
         adminConditions.push({ category: { departmentId: user.departmentId } });
       }
@@ -72,8 +63,6 @@ export const documentService = {
       where.OR = adminConditions;
     }
     else {
-      // Dept User & View Only:
-      // See ONLY categories they are explicitly assigned to
       where.category = {
         accessList: {
           some: { userId: user.id }
@@ -81,7 +70,6 @@ export const documentService = {
       };
     }
 
-    // Execute Query
     const docs = await prisma.document.findMany({
       where,
       select: {
@@ -106,14 +94,12 @@ export const documentService = {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Fetch Stats (keeping your existing pattern)
     const statsArray = await Promise.all(
       docs.map((d) =>
         statsService.getQuickStatsForDocument(d.documentId),
       ),
     );
 
-    // Map to Response
     return docs.map((doc, idx) => ({
       documentId: doc.documentId,
       fileName: doc.fileName,
@@ -132,9 +118,6 @@ export const documentService = {
     }));
   },
 
-  /**
-   * Creates a new document record.
-   */
   async createDocument({
     userId,
     fileName,
@@ -162,10 +145,6 @@ export const documentService = {
     });
   },
 
-  /**
-   * Fetches a single document by its ID.
-   * NOTE: This needs security checks in the Controller/Route before returning!
-   */
   async getDocumentById(documentId: string) {
     const doc = await prisma.document.findUnique({
       where: { documentId },
@@ -190,9 +169,6 @@ export const documentService = {
     };
   },
 
-  /**
-   * Updates a document's file name.
-   */
   async updateDocument(
     documentId: string,
     data: { fileName?: string },
@@ -205,9 +181,6 @@ export const documentService = {
     });
   },
 
-  /**
-   * Deletes a document and its file from storage.
-   */
   async deleteDocument(documentId: string) {
     const document = await prisma.document.findUnique({
       where: { documentId },
@@ -225,8 +198,63 @@ export const documentService = {
   },
 
   /**
-   * Generates a signed URL.
+   * Generates a signed URL if the user has permission to view the document.
+   * Checks: Owner OR Access List OR Admin Roles.
    */
+  async getAuthorizedSignedUrl(userId: string, documentId: string): Promise<string> {
+    // 1. Fetch document with Category and Access List info
+    const doc = await prisma.document.findUnique({
+      where: { documentId },
+      include: {
+        category: {
+          include: {
+            accessList: {
+              where: { userId }, // Check if THIS user is in the access list
+            }
+          }
+        },
+      }
+    });
+
+    if (!doc) {
+      throw new ServiceError('Document not found', 404);
+    }
+
+    // 2. Check: Is user the Owner?
+    if (doc.userId === userId) {
+      return this.getSignedUrl(doc.filePath);
+    }
+
+    // 3. Check: Is user in the Category Access List?
+    // If the 'where' clause in the include found anything, the array will have items.
+    if (doc.category?.accessList && doc.category.accessList.length > 0) {
+      return this.getSignedUrl(doc.filePath);
+    }
+
+    // 4. Fallback: Check for Admin Roles (Master or Dept Admin)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, departmentId: true }
+    });
+
+    if (!user) throw new ServiceError('User not found', 401);
+
+    // Master Admin can see everything
+    if (user.role === UserRole.MasterAdmin) {
+      return this.getSignedUrl(doc.filePath);
+    }
+
+    // Dept Admin can see everything in their department
+    if (user.role === UserRole.DeptAdmin) {
+      if (doc.category?.departmentId === user.departmentId) {
+        return this.getSignedUrl(doc.filePath);
+      }
+    }
+
+    // If all checks fail
+    throw new ServiceError('Access denied. You do not have permission to view this document.', 403);
+  },
+
   async getSignedUrl(
     filePath: string,
   ): Promise<string> {
@@ -237,9 +265,6 @@ export const documentService = {
     );
   },
 
-  /**
-   * Validates file type and size.
-   */
   async validateUploadFile(file: File) {
     const { maxFileSizeMb, allowedMimeTypes } =
       await systemSettingService.getUploadLimits();
@@ -254,7 +279,7 @@ export const documentService = {
     }
 
     const fileSizeMB = file.size / (1024 * 1024);
-    const limit = maxFileSizeMb ?? 10; // Default 10MB if not set
+    const limit = maxFileSizeMb ?? 10; 
 
     if (fileSizeMB > limit) {
       throw new ServiceError(

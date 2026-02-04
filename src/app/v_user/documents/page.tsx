@@ -33,6 +33,25 @@ export default function ViewUserDocuments() {
   // 2. Assign the interface to the state
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
+const handleView = async (documentId: string) => {
+  console.log('CLICKED VIEW:', documentId);
+
+  try {
+    const res = await fetch(`/api/documents/${documentId}/signed-url`);
+    console.log('RESPONSE STATUS:', res.status);
+
+    const text = await res.text();
+    console.log('RAW RESPONSE:', text);
+
+    const data = JSON.parse(text);
+    console.log('SIGNED URL:', data.signedUrl);
+
+    window.open(data.signedUrl, '_blank');
+  } catch (err) {
+    console.error('View failed', err);
+  }
+};
+
 
 useEffect(() => {
   const fetchDocs = async () => {
@@ -95,16 +114,14 @@ useEffect(() => {
                   </TableCell>
                   <TableCell>{(doc.size / 1024).toFixed(2)} KB</TableCell>
                   <TableCell align="right">
-                    <IconButton 
-                      size="small" 
-                      onClick={() =>
-  window.open(`/api/documents/${doc.documentId}/view`, '_blank')
-}
+                    <IconButton
+  size="small"
+  onClick={() => handleView(doc.documentId)}
+  sx={{ color: '#F36C24' }}
+>
+  <VisibilityIcon fontSize="small" />
+</IconButton>
 
-                      sx={{ color: '#F36C24' }}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
                     <IconButton size="small">
                       <DownloadIcon fontSize="small" />
                     </IconButton>
