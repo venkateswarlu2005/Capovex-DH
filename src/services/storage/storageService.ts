@@ -1,3 +1,6 @@
+import fs from 'fs/promises';
+import path from 'path';
+
 import { logWarn, logError } from '@/lib/logger';
 import { SupabaseProvider } from '@/services/storage/supabase/supabaseStorageProvider';
 
@@ -14,7 +17,7 @@ export type FileMetadata = {
  * Result of a file upload operation.
  */
 export type UploadResult = {
-	filePath: string;
+	filePath: string; // ALWAYS db-safe path
 };
 
 /**
@@ -39,40 +42,47 @@ export interface StorageProvider {
 }
 
 /**
- * Placeholder local provider (safe for laptop dev).
+ * Local filesystem provider (used when STORAGE_PROVIDER=local).
+ * Files are saved to /public/uploads and are browser-accessible.
  */
 export class PlaceholderProvider implements StorageProvider {
+	private uploadRoot = path.join(process.cwd(), 'public', 'uploads');
+
 	async upload(
-		_fileBuffer: Buffer,
-		_metadata: FileMetadata,
-		_bucket?: string,
+		fileBuffer: Buffer,
+		metadata: FileMetadata,
 	): Promise<UploadResult> {
-		logWarn('PlaceholderProvider: upload called');
-		return { filePath: 'https://example.com/placeholder-url' };
+		const filePath = `${metadata.userId}/${metadata.fileName}`;
+		const fullPath = path.join(this.uploadRoot, filePath);
+
+		await fs.mkdir(path.dirname(fullPath), { recursive: true });
+		await fs.writeFile(fullPath, fileBuffer);
+
+		logWarn(`Local upload saved: ${filePath}`);
+
+		return { filePath };
 	}
 
-	async delete(_filePath: string, _bucket?: string): Promise<void> {
-		logWarn('PlaceholderProvider: delete called');
+	async delete(filePath: string): Promise<void> {
+		const fullPath = path.join(this.uploadRoot, filePath);
+		await fs.unlink(fullPath).catch(() => {});
 	}
 
-	async list(_prefix?: string, _bucket?: string): Promise<string[]> {
-		logWarn('PlaceholderProvider: list called');
+	async list(_prefix?: string): Promise<string[]> {
 		return [];
 	}
 
 	async generateSignedUrl(
 		filePath: string,
-		expiresIn: number,
-		_bucket?: string,
+		_expiresIn: number,
 	): Promise<string> {
-		logWarn('PlaceholderProvider: generateSignedUrl called');
-		return `https://example.com/signed-url?file=${filePath}&expires_in=${expiresIn}`;
+		// Local files are directly accessible
+		return `/uploads/${filePath}`;
 	}
 }
 
 /**
- * Selects storage provider at RUNTIME (important for Next.js).
- * Never crashes if env is missing.
+ * Selects storage provider at runtime (important for Next.js).
  */
 function selectStorageProvider(): StorageProvider {
 	const provider = process.env.STORAGE_PROVIDER ?? 'local';
@@ -96,12 +106,11 @@ function selectStorageProvider(): StorageProvider {
 
 /**
  * Singleton storage provider instance.
- * Safe because selection has fallback.
  */
 const storageProvider: StorageProvider = selectStorageProvider();
 
 /**
- * Public storage service API.
+ * Public storage service API (DB-agnostic).
  */
 export const storageService = {
 	async uploadFile(

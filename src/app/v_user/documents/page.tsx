@@ -97,7 +97,10 @@ useEffect(() => {
                   <TableCell align="right">
                     <IconButton 
                       size="small" 
-                      onClick={() => window.open(`/api/documents/${doc.documentId}`, '_blank')}
+                      onClick={() =>
+  window.open(`/api/documents/${doc.documentId}/view`, '_blank')
+}
+
                       sx={{ color: '#F36C24' }}
                     >
                       <VisibilityIcon fontSize="small" />
