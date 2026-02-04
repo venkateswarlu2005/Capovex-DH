@@ -2,6 +2,8 @@
 
 import { useSession } from 'next-auth/react';
 import MasterAdminSidebar from './MasterAdminSidebar';
+import ViewSidebar from './ViewSidebar';
+
 // import DeptAdminSidebar from './DeptAdminSidebar';
 // import DeptUserSidebar from './DeptUserSidebar';
 
@@ -21,8 +23,8 @@ export default function Sidebar() {
 
     // case 'DEPT_USER':
     //   return <DeptUserSidebar />;
-
+     
     default:
-      return null;
+      return <ViewSidebar />;
   }
 }

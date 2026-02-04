@@ -14,7 +14,7 @@ import { UserRole } from '@/shared/enums';
 import { Prisma } from '@prisma/client';
 
 /* -------------------------------------------------------------------------- */
-/* Types                                                                     */
+/* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
 type UserContext = {
@@ -57,12 +57,19 @@ export const documentService = {
     }
     else if (user.role === UserRole.DeptAdmin) {
       // Dept Admin sees:
-      // A. Everything in their own Department
-      // B. Any categories in other departments they were explicitly granted access to
-      where.OR = [
-        { category: { departmentId: user.departmentId } },
-        { category: { accessList: { some: { userId: user.id } } } }
+      // A. Any categories in other departments they were explicitly granted access to
+      // B. Everything in their own Department (if they have one assigned)
+      
+      const adminConditions: Prisma.DocumentWhereInput[] = [
+         { category: { accessList: { some: { userId: user.id } } } }
       ];
+
+      // FIX: Only add the department filter if the ID is a valid string
+      if (user.departmentId) {
+        adminConditions.push({ category: { departmentId: user.departmentId } });
+      }
+
+      where.OR = adminConditions;
     }
     else {
       // Dept User & View Only:

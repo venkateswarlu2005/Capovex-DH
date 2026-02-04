@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     let whereClause: any = {};
 
-    // 1. MASTER ADMIN: Sees ALL Pending requests (Incoming to them)
+
     if (role === UserRole.MasterAdmin) {
       whereClause = {
         status: RequestStatus.PENDING

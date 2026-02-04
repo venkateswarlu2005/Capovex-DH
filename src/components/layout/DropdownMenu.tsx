@@ -107,19 +107,21 @@ export default function DropdownMenu() {
 				))}
 
 				<MenuItem
-					onClick={() => {
-						handleClose();
-						signOut();
-						router.push('/');
-					}}
-					sx={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-					<Box
-						component={LogOutIcon}
-						width={{ sm: '0.8rem', md: '0.9rem', lg: '1.1rem' }}
-						height='auto'
-					/>
-					<Typography variant='body1'>Log out</Typography>
-				</MenuItem>
+    onClick={async () => { // Make this async
+        handleClose();
+        // 1. Clear session and redirect to home in one clean step
+        // 2. Setting redirect: true is the default, but explicit is better here
+        await signOut({ callbackUrl: '/' }); 
+    }}
+    sx={{ display: 'flex', alignItems: 'center', gap: 8 }}
+>
+    <Box
+        component={LogOutIcon}
+        width={{ sm: '0.8rem', md: '0.9rem', lg: '1.1rem' }}
+        height='auto'
+    />
+    <Typography variant='body1'>Log out</Typography>
+</MenuItem>
 			</Menu>
 		</Box>
 	);

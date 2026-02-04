@@ -170,23 +170,46 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
-    async session({ session, token }) {
-      session.user = {
-        id: token.id as string,
-        userId: token.userId as string,
-        role: token.role as UserRole,
-        firstName: token.firstName as string,
-        lastName: token.lastName as string,
-        email: token.email as string,
-        authProvider: token.authProvider as AuthProviderEnum,
-        avatarUrl: token.avatarUrl as string | undefined,
-        status: token.status as UserStatus,
-
-        // NEW: Pass to client session
-        departmentId: token.departmentId || null,
-      };
-      return session;
+async session({ session, token }) {
+  const categoryAccess = await prisma.userCategoryAccess.findMany({
+    where: { userId: token.id as string },
+    select: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          departmentId: true,
+        },
+      },
+      canUpload: true,
+      canDelete: true,
     },
+    orderBy: {
+      category: { createdAt: 'asc' },
+    },
+  });
+
+  // 1️⃣ Assign only known properties
+  session.user = {
+    id: token.id as string,
+    userId: token.userId as string,
+    role: token.role as UserRole,
+    firstName: token.firstName as string,
+    lastName: token.lastName as string,
+    email: token.email as string,
+    authProvider: token.authProvider as AuthProviderEnum,
+    avatarUrl: token.avatarUrl as string | undefined,
+    status: token.status as UserStatus,
+    departmentId: token.departmentId || null,
+  };
+
+  // 2️⃣ Attach extra data safely (no TS error)
+  (session.user as any).categoryAccess = categoryAccess;
+
+  return session;
+},
+
+
 
     async redirect({ url, baseUrl }) {
       return url.startsWith(baseUrl) ? url : baseUrl;

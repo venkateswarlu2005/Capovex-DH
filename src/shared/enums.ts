@@ -41,3 +41,21 @@ export enum RequestType {
 	ACCESS_DOCUMENT = 'ACCESS_DOCUMENT',
 	OTHER = 'OTHER',
 }
+// Shared Interface for Document data structure
+export interface CategoryInfo {
+  id: string;
+  name: string;
+}
+
+export interface Document {
+  id: string;
+  documentId?: string; // Some of your APIs use documentId
+  fileName: string;
+  fileType?: string;
+  size?: number;
+  filePath?: string;
+  categoryId: string;
+  userId: string;
+  createdAt?: string;
+  category?: CategoryInfo; // The nested category object
+}

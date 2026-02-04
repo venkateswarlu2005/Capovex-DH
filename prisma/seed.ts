@@ -1,59 +1,118 @@
-import { PrismaClient } from '@prisma/client';
-
-import { makeUsers } from './data/users';
+import { PrismaClient, Role } from '@prisma/client'; // Changed UserRole to Role
 import { makeDocuments } from './data/documents';
-import { makeLinks } from './data/links';
-import { makeVisitors } from './data/visitors';
-import { makeAnalytics } from './data/analytics';
-import { emptyStorageBucket } from './data/media';
 
 const prisma = new PrismaClient();
-
-const IS_PROD = process.env.NODE_ENV === 'production';
-const SHOULD_UPLOAD = true;
+const SHOULD_UPLOAD = false; // Set to true if you want real S3 uploads
 
 async function main() {
-	console.log('🌱  Begin Seeding…');
+  console.log('🌱  Begin Seeding...');
 
-	if (SHOULD_UPLOAD && !IS_PROD) {
-		console.warn('⚠️ Attempting to clear the storage bucket...');
-		await emptyStorageBucket();
-	}
-	console.log('🌱  Seeding database…');
+  // 1. Clean up old data (Optional: Uncomment to wipe DB before seeding)
+  // await prisma.documentAnalytics.deleteMany();
+  // await prisma.documentLinkVisitor.deleteMany();
+  // await prisma.documentLink.deleteMany();
+  // await prisma.document.deleteMany();
+  // await prisma.userCategoryAccess.deleteMany();
+  // await prisma.category.deleteMany();
+  // await prisma.department.deleteMany();
+  // await prisma.user.deleteMany();
 
-	// 1) Users
-	const users = await makeUsers(1);
-	await prisma.user.createMany({ data: users });
-	console.log(`➤ seeded ${users.length} users`);
+  // 2. Create Organization Structure
+  console.log('➤ Creating Organization Structure...');
+  
+  const legalDept = await prisma.department.create({
+    data: { name: 'Legal Department', description: 'Legal docs and contracts' }
+  });
 
-	// 2) Documents
-	const documents = await makeDocuments(users, SHOULD_UPLOAD);
-	await prisma.document.createMany({ data: documents });
-	console.log(`➤ seeded ${documents.length} documents`);
+  const contractsCat = await prisma.category.create({
+    data: { name: 'Contracts', departmentId: legalDept.id }
+  });
 
-	// 3) Links
-	const links = await makeLinks(documents);
-	await prisma.documentLink.createMany({ data: links });
-	console.log(`➤ seeded ${links.length} links`);
+  const financialsCat = await prisma.category.create({
+    data: { name: 'Financials', departmentId: legalDept.id }
+  });
 
-	// 4) Visitors
-	const visitorsInput = makeVisitors(links);
-	const visitors = await Promise.all(
-		visitorsInput.map((v) => prisma.documentLinkVisitor.create({ data: v })),
-	);
-	console.log(`➤ seeded ${visitors.length} visitors`);
+  // 3. Create Users
+  console.log('➤ Creating Users...');
+  
+  // Create a specific View Only User for testing
+  const viewUser = await prisma.user.create({
+    data: {
+      email: 'view@test.com',
+      firstName: 'View',
+      lastName: 'User',
+      role: Role.VIEW_ONLY_USER, // Using the correct Enum from your schema
+      status: 'ACTIVE',
+      // Note: If you are using bcrypt in your app, you should hash this password manually here
+      // e.g. password: await hash('password123', 10)
+      password: 'password123', 
+    }
+  });
 
-	// 5) Analytics
-	const analytics = makeAnalytics({ documents, links, visitors });
-	await prisma.documentAnalytics.createMany({ data: analytics });
-	console.log(`➤ seeded ${analytics.length} analytics rows`);
+  // Create a Master Admin
+  await prisma.user.create({
+    data: {
+      email: 'admin@test.com',
+      firstName: 'Master',
+      lastName: 'Admin',
+      role: Role.MASTER_ADMIN,
+      status: 'ACTIVE',
+      password: 'password123',
+    }
+  });
 
-	console.log('🌱  Seeded demo data');
+  // 4. Grant Access
+  console.log('➤ Granting Permissions...');
+  
+  // Give ViewUser access to the "Contracts" category
+  await prisma.userCategoryAccess.create({
+    data: {
+      userId: viewUser.id,
+      categoryId: contractsCat.id,
+      canUpload: false,
+      canDelete: false
+    }
+  });
+
+  // 5. Create Documents attached to Categories
+  console.log('➤ Seeding Documents...');
+
+  // FIX: We cast this to 'any' to bypass the TypeScript error about missing 'email'
+  // We use viewUser.id (the CUID) so the relation works correctly
+  const mockUserList = [{ userId: viewUser.id }] as any; 
+
+  // Generate 5 documents for Contracts
+  const rawDocs = await makeDocuments(mockUserList, SHOULD_UPLOAD, 5);
+
+  const docsWithCategory = rawDocs.map(doc => ({
+    ...doc,
+    categoryId: contractsCat.id, // <--- IMPORTANT: Link to category
+    userId: viewUser.id 
+  }));
+
+  await prisma.document.createMany({ data: docsWithCategory });
+
+  // Generate 3 documents for Financials (Hidden from view user)
+  const rawDocs2 = await makeDocuments(mockUserList, SHOULD_UPLOAD, 3);
+  const hiddenDocs = rawDocs2.map(doc => ({
+    ...doc,
+    categoryId: financialsCat.id,
+    userId: viewUser.id
+  }));
+  
+  await prisma.document.createMany({ data: hiddenDocs });
+
+  console.log('✅ Seed complete!');
+  console.log('-------------------------------------------');
+  console.log(`Test User Email: view@test.com`);
+  console.log(`Test User Role : ${Role.VIEW_ONLY_USER}`);
+  console.log(`Has Access To  : ${contractsCat.name}`);
+  console.log('-------------------------------------------');
 }
 
 main()
-	.catch((e) => {
-		console.error(e);
-		process.exit(1);
-	})
-	.finally(async () => prisma.$disconnect());
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => prisma.$disconnect());
