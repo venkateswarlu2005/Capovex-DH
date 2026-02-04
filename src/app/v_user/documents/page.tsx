@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react'; 
 import {
   Box,
   Grid,
@@ -53,16 +54,42 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface ApiMessage {
+    id: string;
+    content: string;
+    senderId: string;
+    createdAt: string;
+    sender: {
+        firstName: string;
+        lastName: string;
+        avatarUrl?: string;
+    }
+}
+
+// FIX 1: Extend the Session User type locally to include departmentId
+// This prevents TypeScript errors when accessing session.user.departmentId
+type ExtendedUser = {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  image?: string;
+  departmentId?: string | null; // Added this
+  role?: string;
+};
+
 export default function DocumentDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession(); 
   
+  // Cast session user to our extended type
+  const user = session?.user as ExtendedUser | undefined;
+
   /* ---------------- DYNAMIC HEADING LOGIC ---------------- */
   const categoryId = searchParams.get('categoryId');
   const categoryName = searchParams.get('categoryName');
   
-  // Logic: If no categoryId is present OR it's an "all" request, show "ALL DOCUMENTS"
-  // Otherwise, show the actual category name passed in the URL
   const displayTitle = (!categoryId || searchParams.get('all') === 'true')
     ? 'ALL DOCUMENTS' 
     : (categoryName || 'DOCUMENTS').toUpperCase();
@@ -71,11 +98,26 @@ export default function DocumentDashboard() {
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loadingDocs, setLoadingDocs] = useState(true);
+  
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  /* ---------------- API ACTIONS ---------------- */
+  /* ---------------- HELPER: GET CORRECT DEPT ID ---------------- */
+  // FIX 2: Logic to determine the correct ID to send to the Chat API.
+  // We prioritize the User's Department ID from the session to avoid FK errors.
+  const getChatTargetId = () => {
+    // A. If user is an Employee/Admin, they chat in their own Department.
+    if (user?.departmentId) {
+        return user.departmentId;
+    }
+    // B. If user is a Viewer (no deptId), they chat in the context of the Category.
+    // Note: If this still fails, the Viewer's account must be linked to a Dept in the backend.
+    return categoryId;
+  };
+
+  /* ---------------- API ACTIONS: DOCUMENTS ---------------- */
   const fetchDocs = async () => {
-    setLoading(true);
+    setLoadingDocs(true);
     try {
       const url = categoryId
         ? `/api/documents?categoryId=${categoryId}`
@@ -84,15 +126,83 @@ export default function DocumentDashboard() {
       const res = await fetch(url);
       const data = await res.json();
       setDocuments(data.documents || []);
-      
-      setMessages([
-        { id: '1', sender: 'other', senderName: 'Support', text: 'How can I help you with these documents?', timestamp: '10:23 AM' }
-      ]);
     } catch (err) {
       console.error('Failed to fetch documents', err);
       setDocuments([]);
     } finally {
-      setLoading(false);
+      setLoadingDocs(false);
+    }
+  };
+
+  /* ---------------- API ACTIONS: CHAT ---------------- */
+  const fetchMessages = async () => {
+    if (!user) return;
+
+    try {
+        const params = new URLSearchParams();
+        
+        // FIX 3: Use the helper to get the correct ID
+        const targetId = getChatTargetId();
+        
+        if (targetId) {
+            params.append('departmentId', targetId);
+        }
+
+        // Keep viewerUserId logic if it's an Admin view
+        const viewerId = searchParams.get('viewerUserId');
+        if (viewerId) params.append('viewerUserId', viewerId);
+
+        const res = await fetch(`/api/chat?${params.toString()}`);
+        
+        if (res.ok) {
+            const data: ApiMessage[] = await res.json();
+            
+            const formattedMessages: ChatMessage[] = data.map((msg) => {
+                const isMe = msg.senderId === user.id;
+                return {
+                    id: msg.id,
+                    sender: isMe ? 'me' : 'other',
+                    senderName: isMe ? 'Me' : `${msg.sender.firstName} ${msg.sender.lastName}`,
+                    text: msg.content,
+                    timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+            });
+            setMessages(formattedMessages);
+        }
+    } catch (error) {
+        console.error("Chat load error", error);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !user) return;
+
+    const tempContent = chatInput;
+    setChatInput(''); 
+
+    // FIX 4: Use the helper to get the correct ID for POST as well
+    const targetId = getChatTargetId();
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: tempContent,
+                departmentId: targetId, // <--- Corrected here
+                viewerUserId: searchParams.get('viewerUserId') 
+            })
+        });
+
+        if (res.ok) {
+            fetchMessages(); 
+        } else {
+            setChatInput(tempContent); 
+            console.error("Failed to send");
+        }
+    } catch (err) {
+        console.error("Send error", err);
+        setChatInput(tempContent);
     }
   };
 
@@ -108,24 +218,29 @@ export default function DocumentDashboard() {
     }
   };
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
-    const newMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'me',
-      senderName: 'Me',
-      text: chatInput,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, newMsg]);
-    setChatInput('');
-  };
-
+  /* ---------------- EFFECTS ---------------- */
+  
   useEffect(() => {
     fetchDocs();
   }, [categoryId]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!user) return;
+    
+    fetchMessages(); 
+    
+    const interval = setInterval(fetchMessages, 5000); 
+    return () => clearInterval(interval);
+  }, [categoryId, session]); // Refetch if session loads or category changes
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+
+  /* ---------------- RENDER ---------------- */
+
+  if (loadingDocs) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress sx={{ color: '#ff7a18' }} />
@@ -144,7 +259,7 @@ export default function DocumentDashboard() {
           </Typography>
           <Box display="flex" alignItems="center" gap={4}>
              <Typography variant='h2' color="text.secondary" sx={{ fontSize: '1rem', fontWeight: 400 }}>
-                View all the Files and Folders shared with you
+               View all the Files and Folders shared with you
              </Typography>
              <Box 
                sx={{ 
@@ -201,7 +316,6 @@ export default function DocumentDashboard() {
 
               <Divider sx={{ mb: 2 }} />
 
-              {/* Dynamic Breadcrumb */}
               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <FolderIcon sx={{ color: '#ff7a18', mr: 1, fontSize: 20 }} /> 
                 / {displayTitle.toLowerCase()}
@@ -268,9 +382,11 @@ export default function DocumentDashboard() {
         <Grid item xs={12} md={4}>
           <Card sx={{ borderRadius: 3, height: '100%', maxHeight: 800, display: 'flex', flexDirection: 'column', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
             <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Header and Chat logic remains the same... */}
+              
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                 <Typography variant="h6" fontWeight={700} fontSize={16}>DROP A MESSAGE</Typography>
+                 <Typography variant="h6" fontWeight={700} fontSize={16}>
+                    {user?.departmentId ? "TEAM CHAT" : "SUPPORT CHAT"}
+                 </Typography>
                  <Box display="flex" alignItems="center" gap={1}>
                     <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4caf50' }} />
                     <Typography variant="caption" color="text.secondary">Active</Typography>
@@ -279,19 +395,30 @@ export default function DocumentDashboard() {
               <Divider sx={{ mb: 2 }} />
 
               <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, pr: 1, minHeight: '300px' }}>
-                {messages.map((msg) => (
-                  <Box key={msg.id} sx={{ display: 'flex', flexDirection: msg.sender === 'me' ? 'row-reverse' : 'row', mb: 2, gap: 1 }}>
-                    {msg.sender === 'other' && <Avatar sx={{ width: 30, height: 30, fontSize: 12 }}>AD</Avatar>}
-                    <Box sx={{ maxWidth: '80%' }}>
-                      <Paper elevation={0} sx={{ p: 1.5, bgcolor: msg.sender === 'me' ? '#f0f0f0' : '#fff', border: '1px solid #eee', borderRadius: 2 }}>
-                         <Typography fontSize={14}>{msg.text}</Typography>
-                      </Paper>
-                      <Typography variant="caption" color="text.secondary" display="block" textAlign={msg.sender === 'me' ? 'right' : 'left'} mt={0.5}>
-                        {msg.timestamp}
-                      </Typography>
+                {messages.length === 0 ? (
+                    <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+                        <Typography variant="body2" color="text.secondary">Start the conversation...</Typography>
                     </Box>
-                  </Box>
-                ))}
+                ) : (
+                    messages.map((msg) => (
+                        <Box key={msg.id} sx={{ display: 'flex', flexDirection: msg.sender === 'me' ? 'row-reverse' : 'row', mb: 2, gap: 1 }}>
+                            {msg.sender === 'other' && (
+                                <Avatar sx={{ width: 30, height: 30, fontSize: 12, bgcolor: '#ff7a18' }}>
+                                    {msg.senderName.charAt(0)}
+                                </Avatar>
+                            )}
+                            <Box sx={{ maxWidth: '80%' }}>
+                            <Paper elevation={0} sx={{ p: 1.5, bgcolor: msg.sender === 'me' ? '#f0f0f0' : '#fff', border: '1px solid #eee', borderRadius: 2 }}>
+                                <Typography fontSize={14}>{msg.text}</Typography>
+                            </Paper>
+                            <Typography variant="caption" color="text.secondary" display="block" textAlign={msg.sender === 'me' ? 'right' : 'left'} mt={0.5}>
+                                {msg.timestamp}
+                            </Typography>
+                            </Box>
+                        </Box>
+                    ))
+                )}
+                <div ref={chatEndRef} />
               </Box>
 
               <Box sx={{ mt: 'auto' }}>
@@ -302,6 +429,12 @@ export default function DocumentDashboard() {
                    placeholder="Type a message..."
                    value={chatInput}
                    onChange={(e) => setChatInput(e.target.value)}
+                   onKeyDown={(e) => {
+                       if (e.key === 'Enter' && !e.shiftKey) {
+                           e.preventDefault();
+                           handleSendMessage();
+                       }
+                   }}
                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#f9f9f9' } }}
                  />
                  <Box display="flex" justifyContent="space-between" mt={1}>
@@ -311,6 +444,7 @@ export default function DocumentDashboard() {
                       size="small" 
                       endIcon={<SendIcon />}
                       onClick={handleSendMessage}
+                      disabled={!chatInput.trim()}
                       sx={{ bgcolor: '#ff7a18', '&:hover': { bgcolor: '#e56a10' }, textTransform: 'none' }}
                     >
                       Send
@@ -322,7 +456,7 @@ export default function DocumentDashboard() {
         </Grid>
       </Grid>
 
-      {/* FOOTER remains the same... */}
+      {/* FOOTER */}
       <Card sx={{ mt: 4, borderRadius: 2, bgcolor: '#fff', border: '1px solid #eaeaea', boxShadow: 'none' }}>
         <CardContent sx={{ py: 1.5, px: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
            <Box display="flex" alignItems="center" gap={1}>

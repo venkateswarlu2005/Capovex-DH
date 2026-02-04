@@ -50,7 +50,7 @@ onSuccess: async () => {
   // 👉 read categoryAccess safely (no typings, no errors)
   const categoryAccess =
     (updatedSession?.user as any)?.categoryAccess ?? [];
-   console.log(categoryAccess);
+   
   // 🔹 VIEW ONLY USER → FIRST CATEGORY
   if (role === UserRole.ViewOnlyUser) {
     if (categoryAccess.length > 0) {
