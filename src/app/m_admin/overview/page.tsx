@@ -73,7 +73,11 @@ export default function MasterAdminOverviewPage() {
 
   /* -------------------- Forms -------------------- */
   const [deptName, setDeptName] = useState('');
-  const [catForm, setCatForm] = useState({ deptId: '', name: '' });
+  const [catForm, setCatForm] = useState({
+    departmentId: '',
+    name: '',
+  });
+
   const [uploadForm, setUploadForm] = useState({
     departmentId: '',
     categoryId: '',
@@ -81,23 +85,16 @@ export default function MasterAdminOverviewPage() {
   });
 
   /* -------------------- API Calls -------------------- */
-  const fetchAllData = async () => {
-    // Fetch everything to keep the dashboard in sync
-    await Promise.all([
-      fetchDepartments(),
-      fetchStats(),
-      fetchActivity(),
-      fetchRequests()
-    ]);
-  };
 
   const fetchDepartments = async () => {
     const res = await fetch('/api/departments', { cache: 'no-store' });
     if (res.ok) setDepartments(await res.json());
   };
 
-  const fetchCategories = async (deptId: string) => {
-    const res = await fetch(`/api/categories?departmentId=${deptId}`, { cache: 'no-store' });
+  const fetchCategories = async (departmentId: string) => {
+    const res = await fetch(`/api/categories?departmentId=${departmentId}`, {
+      cache: 'no-store',
+    });
     if (res.ok) setCategories(await res.json());
   };
 
@@ -117,11 +114,21 @@ export default function MasterAdminOverviewPage() {
     else setRequests([]);
   };
 
+  const fetchAllData = async () => {
+    await Promise.all([
+      fetchDepartments(),
+      fetchStats(),
+      fetchActivity(),
+      fetchRequests(),
+    ]);
+  };
+
   useEffect(() => {
     fetchAllData();
   }, []);
 
   /* -------------------- Mutations -------------------- */
+
   const createDepartment = async () => {
     await fetch('/api/departments', {
       method: 'POST',
@@ -134,67 +141,79 @@ export default function MasterAdminOverviewPage() {
   };
 
   const createCategory = async () => {
-    await fetch('/api/categories', {
+    const res = await fetch('/api/categories', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(catForm),
     });
-    setCatForm({ deptId: '', name: '' });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Create Category Failed:', res.status, err);
+      alert(err);
+      return;
+    }
+
+    setCatForm({ departmentId: '', name: '' });
     setOpenCat(false);
     fetchAllData();
   };
 
   const uploadDocument = async () => {
     if (!uploadForm.file || !uploadForm.categoryId) return;
+
     const formData = new FormData();
     formData.append('file', uploadForm.file);
     formData.append('categoryId', uploadForm.categoryId);
 
-    await fetch('/api/documents', { method: 'POST', body: formData });
+    await fetch('/api/documents', {
+      method: 'POST',
+      body: formData,
+    });
+
     setUploadForm({ departmentId: '', categoryId: '', file: null });
     setOpenUpload(false);
     fetchAllData();
   };
 
-const updateRequestStatus = async (
-  requestId: string,
-  status: 'APPROVED' | 'REJECTED'
-) => {
-  const res = await fetch(`/api/requests/${requestId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
-  });
+  const updateRequestStatus = async (
+    requestId: string,
+    status: 'APPROVED' | 'REJECTED'
+  ) => {
+    const res = await fetch(`/api/requests/${requestId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
 
-  const text = await res.text();
+    if (!res.ok) {
+      console.error(await res.text());
+      return;
+    }
 
-  if (!res.ok) {
-    console.error('Failed to update request');
-    console.error('STATUS:', res.status);
-    console.error('RESPONSE:', text);
-    return;
-  }
+    fetchAllData();
+  };
 
-  fetchAllData();
-};
-
+  /* -------------------------------------------------------------------------- */
+  /* UI                                                                         */
+  /* -------------------------------------------------------------------------- */
 
   return (
     <Box sx={{ p: 6 }}>
-      {/* ==================== HEADER ==================== */}
+      {/* HEADER */}
       <Stack direction="row" justifyContent="space-between" mb={6}>
         <Typography variant="h1" fontWeight={600}>
           Dashboard / Overview
         </Typography>
 
         <Stack direction="row" spacing={2}>
-          <Button startIcon={<AddOutlinedIcon />} variant="outlined" onClick={() => setOpenDept(true)}>
+          <Button startIcon={<AddOutlinedIcon />} onClick={() => setOpenDept(true)} variant="outlined">
             Create Dept
           </Button>
-          <Button startIcon={<UploadFileOutlinedIcon />} variant="outlined" onClick={() => setOpenUpload(true)}>
+          <Button startIcon={<UploadFileOutlinedIcon />} onClick={() => setOpenUpload(true)} variant="outlined">
             Upload File
           </Button>
-          <Button startIcon={<AddOutlinedIcon />} variant="outlined" onClick={() => setOpenCat(true)}>
+          <Button startIcon={<AddOutlinedIcon />} onClick={() => setOpenCat(true)} variant="outlined">
             New Category
           </Button>
           <Button startIcon={<PersonAddOutlinedIcon />} variant="outlined">
@@ -206,13 +225,13 @@ const updateRequestStatus = async (
         </Stack>
       </Stack>
 
-      {/* ==================== STATS ==================== */}
+      {/* STATS */}
       <Grid container spacing={4} mb={6}>
         {[
           { title: 'TOTAL DOCUMENTS', value: stats.totalDocuments, icon: <DescriptionOutlinedIcon />, color: 'primary' },
           { title: 'ACTIVE USERS', value: stats.activeUsers, icon: <PeopleOutlinedIcon />, color: 'success' },
           { title: 'OPEN REQUESTS', value: stats.openRequests, icon: <FolderOutlinedIcon />, color: 'warning' },
-        ].map(item => (
+        ].map((item) => (
           <Grid item xs={12} md={4} key={item.title}>
             <Card sx={cardSx}>
               <CardContent>
@@ -223,18 +242,14 @@ const updateRequestStatus = async (
                       {item.value}
                     </Typography>
                   </Box>
-                  <IconButton sx={iconBubble(item.color)}>
-                    {item.icon}
-                  </IconButton>
+                  <IconButton sx={iconBubble(item.color)}>{item.icon}</IconButton>
                 </Stack>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
-
-      {/* ==================== MAIN CONTENT ==================== */}
-      <Grid container spacing={4}>
+             <Grid container spacing={4}>
         <Grid item xs={12} md={8}>
           <Card sx={cardSx}>
             <CardContent>
@@ -315,10 +330,9 @@ const updateRequestStatus = async (
           </Card>
         </Grid>
       </Grid>
-
-      {/* ==================== DIALOGS ==================== */}
+         {/* ==================== DIALOGS ==================== */}
       {/* Create Department Dialog */}
-      <Dialog open={openDept} onClose={() => setOpenDept(false)}>
+       <Dialog open={openDept} onClose={() => setOpenDept(false)}>
         <DialogTitle>Create New Department</DialogTitle>
         <DialogContent>
           <TextField fullWidth label="Department Name" value={deptName} onChange={(e) => setDeptName(e.target.value)} sx={{ mt: 2 }} />
@@ -328,25 +342,45 @@ const updateRequestStatus = async (
           <Button variant="contained" onClick={createDepartment}>Create</Button>
         </DialogActions>
       </Dialog>
-
-      {/* New Category Dialog */}
+      {/* CREATE CATEGORY DIALOG */}
       <Dialog open={openCat} onClose={() => setOpenCat(false)}>
         <DialogTitle>Add New Category</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <TextField select fullWidth label="Select Department" value={catForm.deptId} onChange={(e) => setCatForm({ ...catForm, deptId: e.target.value })}>
-              {departments.map(d => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+          <Stack spacing={2} mt={2}>
+            <TextField
+              select
+              fullWidth
+              label="Select Department"
+              value={catForm.departmentId}
+              onChange={(e) =>
+                setCatForm({ ...catForm, departmentId: e.target.value })
+              }
+            >
+              {departments.map((d) => (
+                <MenuItem key={d.id} value={d.id}>
+                  {d.name}
+                </MenuItem>
+              ))}
             </TextField>
-            <TextField fullWidth label="Category Name" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} />
+
+            <TextField
+              fullWidth
+              label="Category Name"
+              value={catForm.name}
+              onChange={(e) =>
+                setCatForm({ ...catForm, name: e.target.value })
+              }
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenCat(false)}>Cancel</Button>
-          <Button variant="contained" onClick={createCategory}>Save</Button>
+          <Button variant="contained" onClick={createCategory}>
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Upload Dialog */}
+       {/* Upload Dialog */}
       <Dialog open={openUpload} onClose={() => setOpenUpload(false)}>
         <DialogTitle>Upload Document</DialogTitle>
         <DialogContent>
