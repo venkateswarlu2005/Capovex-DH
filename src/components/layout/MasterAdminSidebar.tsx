@@ -140,7 +140,7 @@ export default function MasterAdminSidebar() {
               fontFamily: '"Inter","system-ui",sans-serif',
             }}
           >
-            Dataroom
+            Manthan
           </Box>
 
           <Box

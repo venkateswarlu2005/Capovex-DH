@@ -85,7 +85,7 @@ export default function ViewSidebar() {
               fontFamily: '"Inter","system-ui",sans-serif',
             }}
           >
-            Dataroom
+            Manthan
           </Box>
 
           <Box

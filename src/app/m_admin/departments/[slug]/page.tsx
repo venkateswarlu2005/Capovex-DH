@@ -47,11 +47,10 @@ const getStatIcon = (type: string) => {
 
 const mapRoleToDisplay = (dbRole: string) => {
   switch (dbRole) {
-    case 'DEPT_ADMIN': return 'Dept Head';
-    case 'DEPT_USER': return 'Contributor';
-    case 'VIEW_ONLY': return 'Viewer';
+    case 'DEPT_ADMIN': return 'Dept Admin';
+    case 'DEPT_USER': return 'Dept User'
     case 'MASTER_ADMIN': return 'Master Admin';
-    default: return 'User';
+    default: return 'Viewer';
   }
 };
 
@@ -94,10 +93,12 @@ export default function DepartmentSlugPage() {
           r.status === 'PENDING'
         ));
 
-        const userRes = await fetch(`/api/admin/users?departmentId=${deptId}`);
+        const userRes = await fetch(`/api/admin/users`);
         if (userRes.ok) {
           const userData = await userRes.json();
-          setUsers(userData.filter((u: any) => u.departmentId === deptId).map((u: any) => ({
+          console.log('RAW users from API:', userData);
+
+          setUsers(userData.filter((u: any) => ((u.departmentId === deptId )||(u.role==="VIEW_ONLY_USER"))).map((u: any) => ({
             id: u.id,
             name: `${u.firstName} ${u.lastName}`,
             email: u.email,
@@ -106,6 +107,7 @@ export default function DepartmentSlugPage() {
             status: u.status || 'Active',
           })));
         }
+        
       } catch (error) {
         console.error('Failed to fetch department data', error);
       } finally {
