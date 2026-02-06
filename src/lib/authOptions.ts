@@ -15,8 +15,9 @@ import {
 /* Providers                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const providers = [];
+const providers: any[] = [];
 
+/* ============================ CREDENTIALS LOGIN ============================ */
 if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
   providers.push(
     CredentialsProvider({
@@ -26,6 +27,7 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
         password: { label: 'Password', type: 'password' },
         remember: { label: 'Remember', type: 'checkbox' },
       },
+
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
           throw new Error('Email and password are required');
@@ -57,13 +59,16 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
           authProvider: user.authProvider as AuthProviderEnum,
           avatarUrl: user.avatarUrl ?? undefined,
           status: user.status as UserStatus,
-          remember: credentials.remember === 'true',
           departmentId: user.departmentId,
+          remember: credentials.remember === 'true',
         };
       },
     }),
   );
-} else if (process.env.AUTH_METHOD?.toLowerCase() === 'auth0') {
+}
+
+/* =============================== AUTH0 LOGIN =============================== */
+else if (process.env.AUTH_METHOD?.toLowerCase() === 'auth0') {
   providers.push(
     CredentialsProvider({
       name: 'Auth0 ROPG',
@@ -71,6 +76,7 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
+
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) {
           throw new Error('Email and password are required');
@@ -97,11 +103,6 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
           throw new Error(auth0.error_description || 'Invalid credentials');
         }
 
-        const finalUser = await unifyUserByEmail(credentials.email, {
-          fullName: '',
-          picture: undefined,
-        });
-
         const claims = jwtDecode<{ email_verified?: boolean }>(
           auth0.id_token,
         );
@@ -110,12 +111,16 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
           throw new Error('Please verify your e-mail');
         }
 
+        const finalUser = await unifyUserByEmail(credentials.email, {
+          fullName: '',
+          picture: undefined,
+        });
+
         if (finalUser.status !== UserStatus.Active) {
           await prisma.user.update({
             where: { userId: finalUser.userId },
             data: { status: UserStatus.Active },
           });
-          finalUser.status = UserStatus.Active;
         }
 
         return {
@@ -127,7 +132,7 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
           lastName: finalUser.lastName,
           authProvider: finalUser.authProvider as AuthProviderEnum,
           avatarUrl: finalUser.avatarUrl ?? undefined,
-          status: finalUser.status as UserStatus,
+          status: UserStatus.Active,
           departmentId: finalUser.departmentId,
         };
       },
@@ -136,13 +141,13 @@ if (process.env.AUTH_METHOD?.toLowerCase() === 'credentials') {
 }
 
 /* -------------------------------------------------------------------------- */
-/* NextAuth Config                                                            */
+/* NextAuth Configuration                                                     */
 /* -------------------------------------------------------------------------- */
 
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60,
+    maxAge: 24 * 60 * 60, // default 1 day
   },
 
   providers,
@@ -156,72 +161,71 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    /* ================= JWT CALLBACK ================= */
+    /* ============================ JWT CALLBACK ============================ */
     async jwt({ token, user }) {
       if (user) {
-        // 🔹 BASIC USER DATA
         token.id = user.id;
         token.userId = user.userId;
-        token.role = user.role as UserRole;
+        token.email = user.email;
+        token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.email = user.email;
-        token.authProvider = user.authProvider as AuthProviderEnum;
+        token.authProvider = user.authProvider;
         token.avatarUrl = user.avatarUrl;
-        token.status = user.status as UserStatus;
+        token.status = user.status;
         token.departmentId = user.departmentId;
 
-        // 🔹 REMEMBER ME
         token.remember30d = (user as any).remember ?? false;
+
         if (token.remember30d) {
           token.exp =
             Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
         }
-
-        // 🔹 CATEGORY ACCESS (DB CALL — ONLY ON LOGIN)
-        token.categoryAccess =
-          await prisma.userCategoryAccess.findMany({
-            where: { userId: user.id },
-            select: {
-              category: {
-                select: {
-                  id: true,
-                  name: true,
-                  departmentId: true,
-                },
-              },
-              canUpload: true,
-              canDelete: true,
-            },
-            orderBy: {
-              category: { createdAt: 'asc' },
-            },
-          });
       }
 
       return token;
     },
 
-    /* ================= SESSION CALLBACK ================= */
+    /* =========================== SESSION CALLBACK ========================== */
     async session({ session, token }) {
+      const categoryAccess = await prisma.userCategoryAccess.findMany({
+        where: { userId: token.id as string },
+        select: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              departmentId: true,
+            },
+          },
+          canUpload: true,
+          canDelete: true,
+        },
+        orderBy: {
+          category: { createdAt: 'asc' },
+        },
+      });
+
       session.user = {
         id: token.id as string,
         userId: token.userId as string,
+        email: token.email as string,
         role: token.role as UserRole,
         firstName: token.firstName as string,
         lastName: token.lastName as string,
-        email: token.email as string,
         authProvider: token.authProvider as AuthProviderEnum,
         avatarUrl: token.avatarUrl as string | undefined,
         status: token.status as UserStatus,
         departmentId: token.departmentId || null,
       };
 
-      // 🔹 READ FROM JWT (NO DB)
-      (session.user as any).categoryAccess =
-        token.categoryAccess ?? [];
+      (session.user as any).categoryAccess = categoryAccess;
 
       return session;
+    },
+
+    async redirect({ url, baseUrl }) {
+      return url.startsWith(baseUrl) ? url : baseUrl;
     },
   },
 };
