@@ -37,7 +37,7 @@ export default function SignIn() {
   } = form;
 
   /* ================= FORM SUBMISSION ================= */
-  const { loading, handleSubmit } = useFormSubmission({
+  const { loading, handleSubmit,error } = useFormSubmission({
     mutation: signInMutation,
     getVariables: () => form.getValues(),
     validate: () => isValid,
@@ -229,7 +229,22 @@ export default function SignIn() {
               flexDirection="column"
               gap={15}
             >
-              
+              {error && (
+  <Paper
+    sx={{
+      bgcolor: '#FFF4F2',
+      border: '1px solid #F36C24',
+      p: 3,
+      borderRadius: 4,
+      mb: 6,
+    }}
+  >
+    <Typography color="#D84315" fontWeight={600} fontSize={20}>
+      {error}
+    </Typography>
+  </Paper>
+)}
+
               <FormInput
                 label="Email Address"
                 type="email"
