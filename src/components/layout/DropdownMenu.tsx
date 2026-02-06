@@ -111,7 +111,11 @@ export default function DropdownMenu() {
         handleClose();
         // 1. Clear session and redirect to home in one clean step
         // 2. Setting redirect: true is the default, but explicit is better here
-        await signOut({ callbackUrl: '/' }); 
+        await signOut({
+  redirect: true,
+  callbackUrl: '/auth/sign-in',
+});
+
     }}
     sx={{ display: 'flex', alignItems: 'center', gap: 8 }}
 >

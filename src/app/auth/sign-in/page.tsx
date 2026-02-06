@@ -1,10 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormProvider } from 'react-hook-form';
 import Image from 'next/image';
-// At the top of your files
-import { Document, CategoryInfo } from '@/shared/enums';
+
 import {
   Box,
   Typography,
@@ -21,13 +21,13 @@ import { FormInput, LoadingButton, NavLink } from '@/components';
 import { useAuthQueryToasts, useSignInMutation } from '@/hooks/data';
 import { useFormSubmission, useSignInForm } from '@/hooks/forms';
 import { UserRole } from '@/shared/enums';
-import { fontSize } from 'pdfkit';
 
 export default function SignIn() {
-  // 1. ALL HOOKS MUST BE AT THE TOP
+  /* ================= HOOKS ================= */
   useAuthQueryToasts();
+
   const router = useRouter();
-  const { status, update: refreshSession } = useSession();
+  const { data: session, status } = useSession();
   const form = useSignInForm();
   const signInMutation = useSignInMutation();
 
@@ -36,50 +36,52 @@ export default function SignIn() {
     formState: { errors, isValid },
   } = form;
 
+  /* ================= FORM SUBMISSION ================= */
   const { loading, handleSubmit } = useFormSubmission({
     mutation: signInMutation,
     getVariables: () => form.getValues(),
     validate: () => isValid,
-    successMessage: 'Successfully signed in! Redirecting…',
-   // Inside your SignIn component, update the onSuccess handler:
-
-onSuccess: async () => {
-  const updatedSession = await refreshSession();
-
-  const role = updatedSession?.user?.role;
-
-  // 👉 read categoryAccess safely (no typings, no errors)
-  const categoryAccess =
-    (updatedSession?.user as any)?.categoryAccess ?? [];
-   
-  // 🔹 VIEW ONLY USER → FIRST CATEGORY
-  if (role === UserRole.ViewOnlyUser) {
-    if (categoryAccess.length > 0) {
-      const firstCategoryId = categoryAccess[0].category.id;
-      router.replace(`/v_user/documents?categoryId=${firstCategoryId}`);
-    } else {
-      router.replace('/v_user/no-access');
-    }
-    return;
-  }
-
-  // 🔹 OTHER ROLES
-  if (role === UserRole.MasterAdmin) {
-    router.replace('/m_admin/overview');
-  } else if (role === UserRole.DeptAdmin) {
-    router.replace('/d_admin');
-  } else if (role === UserRole.DeptUser) {
-    router.replace('/d_user');
-  }
-},
+    successMessage: 'Successfully signed in!',
+    // 🚫 NO REDIRECT LOGIC HERE
+    onSuccess: () => {},
 
   });
 
+  /* ================= REDIRECT AFTER SESSION READY ================= */
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    const role = session?.user?.role;
+    const categoryAccess = (session?.user as any)?.categoryAccess ?? [];
+
+    if (!role) return;
+
+    if (role === UserRole.ViewOnlyUser) {
+      if (categoryAccess.length > 0) {
+        router.replace(
+          `/v_user/documents?categoryId=${categoryAccess[0].category.id}`,
+        );
+      } else {
+        router.replace('/v_user/no-access');
+      }
+      return;
+    }
+
+    if (role === UserRole.MasterAdmin) {
+      router.replace('/m_admin/overview');
+    } else if (role === UserRole.DeptAdmin) {
+      router.replace('/d_admin');
+    } else if (role === UserRole.DeptUser) {
+      router.replace('/d_user');
+    }
+  }, [status, session, router]);
+
+  /* ================= CONSTANTS ================= */
   const PRIMARY_ORANGE = '#F36C24';
 
-  // 2. ONLY RETURN EARLY AFTER ALL HOOKS ARE DEFINED
+  /* ================= LOADING STATE ================= */
   if (status === 'loading') {
-    return null; // Or a full-page loading spinner
+    return <Box minHeight="100vh" />;
   }
   return (
     <Box
@@ -231,6 +233,7 @@ onSuccess: async () => {
               <FormInput
                 label="Email Address"
                 type="email"
+                autoComplete="email"
                 placeholder="name@company.com"
                 {...register('email')}
                 sx={{ mt: -15 }}
@@ -240,6 +243,7 @@ onSuccess: async () => {
               <FormInput
                 label="Password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 {...register('password')}
                 sx={{mt:-15}}

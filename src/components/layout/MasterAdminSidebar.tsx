@@ -48,7 +48,6 @@ const SECTIONS = [
         label: 'Inbox',
         href: '/m_admin/inbox',
         icon: <MailOutlineIcon />,
-        badge: 3,
       },
     ],
   },
@@ -236,20 +235,8 @@ export default function MasterAdminSidebar() {
                           }}
                         />
 
-                        {item.badge && (
-                          <Chip
-                            label={item.badge}
-                            size="small"
-                            sx={{
-                              height: 22,
-                              minWidth: 22,
-                              borderRadius: '50%',
-                              backgroundColor: alpha('#919EAB', 0.16),
-                              fontWeight: 700,
-                              fontSize: 12,
-                            }}
-                          />
-                        )}
+                       
+                        
                       </ListItemButton>
                     </Link>
                   </ListItem>
