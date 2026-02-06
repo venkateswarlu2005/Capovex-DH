@@ -59,14 +59,14 @@ const SECTIONS = [
         href: '/m_admin/departments',
         icon: <ApartmentOutlinedIcon />,
       },
-      {
+   /*   {
         label: 'Documents',
         href: '/admin/documents',
         icon: <DescriptionOutlinedIcon />,
-      },
+      },*/
     ],
   },
-  {
+ /* {
     title: 'Management',
     items: [
       {
@@ -80,7 +80,7 @@ const SECTIONS = [
         icon: <FactCheckOutlinedIcon />,
       },
     ],
-  },
+  },*/
 ];
 
 /* -------------------------------------------------------------------------- */

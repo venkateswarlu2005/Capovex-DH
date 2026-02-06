@@ -35,15 +35,24 @@ import FolderIcon from '@mui/icons-material/Folder';
 import GroupIcon from '@mui/icons-material/Group';
 import StorageIcon from '@mui/icons-material/Storage';
 import SearchIcon from '@mui/icons-material/Search';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 
 const getStatIcon = (type: string) => {
   switch (type) {
-    case 'folder': return <FolderIcon color="primary" />;
-    case 'users': return <GroupIcon color="secondary" />;
-    case 'storage': return <StorageIcon color="success" />;
-    default: return <FolderIcon />;
+    case 'folder':
+      return <FolderIcon sx={{ color: '#1976d2', fontSize: 40 }} />;
+
+    case 'users':
+      return <PeopleOutlinedIcon sx={{ color: '#9c27b0', fontSize: 40 }} />;
+
+    case 'storage':
+      return <StorageIcon sx={{ color: '#2e7d32', fontSize: 40 }} />;
+
+    default:
+      return <FolderIcon sx={{ fontSize: 40 }} />;
   }
 };
+
 
 const mapRoleToDisplay = (dbRole: string) => {
   switch (dbRole) {
@@ -205,7 +214,7 @@ export default function DepartmentSlugPage() {
             <Typography variant="body2" color="text.secondary">{departmentDesc}</Typography>
           </Box>
         </Stack>
-        <Button startIcon={<SettingsIcon />} variant="outlined" size="small">Department Settings</Button>
+      { /* <Button startIcon={<SettingsIcon />} variant="outlined" size="small">Department Settings</Button>*/}
       </Stack>
 
       {/* STATS */}
@@ -238,13 +247,13 @@ export default function DepartmentSlugPage() {
               <CardContent sx={{ p: 10 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography fontWeight={600} variant='h2'>Categories & Structure</Typography>
-                  <Button size="small" sx={{ textTransform: 'none', color: '#ff6a00', fontWeight: 500 }}>View All Departments</Button>
+                 {/* <Button size="small" sx={{ textTransform: 'none', color: '#ff6a00', fontWeight: 500 }}>View All Departments</Button>*/}
                 </Stack>
                 <Grid container sx={{ color: 'text.secondary', fontSize: 12, fontWeight: 500, py: 5 }}>
                   <Grid item xs={4}>Category Name</Grid>
                   <Grid item xs={3}>Owner</Grid>
                   <Grid item xs={2}>Files</Grid>
-                  <Grid item xs={3} textAlign="right">Actions</Grid>
+                  {/*<Grid item xs={3} textAlign="right">Actions</Grid>*/}
                 </Grid>
                 <Divider />
                 {categories.length === 0 ? (
@@ -263,8 +272,8 @@ export default function DepartmentSlugPage() {
                         <Grid item xs={2}><Typography fontSize={13} color="text.secondary">{cat._count?.documents || 0}</Typography></Grid>
                         <Grid item xs={3}>
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" sx={{ textTransform: 'none' }}>Permissions</Button>
-                            <IconButton size="small"><MoreVertIcon fontSize="small" /></IconButton>
+                           {/* <Button size="small" sx={{ textTransform: 'none' }}>Permissions</Button>*/}
+                            {/*<IconButton size="small"><MoreVertIcon fontSize="small" /></IconButton>*/}
                           </Stack>
                         </Grid>
                       </Grid>
@@ -280,10 +289,10 @@ export default function DepartmentSlugPage() {
               <CardContent sx={{ p: 10 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
                   <Typography fontWeight={600} variant='h2'>User Management</Typography>
-                  <Stack direction="row" spacing={10}>
+                 {/* <Stack direction="row" spacing={10}>
                     <TextField size="small" placeholder="Find user..." InputProps={{ startAdornment: (<SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />) }} sx={{ width: 240 }} />
                     <Button variant="contained" size="small" sx={{ textTransform: 'none' }}>Add User</Button>
-                  </Stack>
+                  </Stack>*/}
                 </Stack>
                 <Grid container sx={{ color: 'text.secondary', fontSize: 12, fontWeight: 500, py: 5 }}>
                   <Grid item xs={4}>USER NAME</Grid>
@@ -331,7 +340,7 @@ export default function DepartmentSlugPage() {
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase',  }} variant='h2'>Departmental Requests</Typography>
-                  <Button size="small" sx={{ color: '#ff6a00', fontWeight: 600 }}>Manage All</Button>
+                 {/* <Button size="small" sx={{ color: '#ff6a00', fontWeight: 600 }}>Manage All</Button>*/}
                 </Stack>
                 <Stack spacing={2}>
                   {requests.length === 0 ? (
@@ -357,7 +366,7 @@ export default function DepartmentSlugPage() {
             </Card>
 
             {/* AUDIT LOGS */}
-            <Card>
+          {/*}  <Card>
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" mb={2}>
                   <Typography fontWeight={600} variant='h2'>Audit Logs</Typography>
@@ -374,7 +383,7 @@ export default function DepartmentSlugPage() {
                   </Stack>
                 ))}
               </CardContent>
-            </Card>
+            </Card>*/}
           </Stack>
         </Grid>
       </Grid>

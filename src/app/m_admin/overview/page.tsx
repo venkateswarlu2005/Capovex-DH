@@ -216,12 +216,12 @@ export default function MasterAdminOverviewPage() {
           <Button startIcon={<AddOutlinedIcon />} onClick={() => setOpenCat(true)} variant="outlined">
             New Category
           </Button>
-          <Button startIcon={<PersonAddOutlinedIcon />} variant="outlined">
+          {/*<Button startIcon={<PersonAddOutlinedIcon />} variant="outlined">
             Invite User
           </Button>
           <Button startIcon={<AssessmentOutlinedIcon />} variant="outlined">
             Report
-          </Button>
+          </Button>*/}
         </Stack>
       </Stack>
 

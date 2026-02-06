@@ -209,9 +209,7 @@ export default function DepartmentsPage() {
                       {dept.description}
                     </Typography>
                   </Box>
-                  <IconButton size="small">
-                    <MoreVertIcon />
-                  </IconButton>
+
                 </Box>
 
                 <Box display="flex" justifyContent="space-between">
