@@ -70,7 +70,7 @@ export default function SignIn() {
     if (role === UserRole.MasterAdmin) {
       router.replace('/m_admin/overview');
     } else if (role === UserRole.DeptAdmin) {
-      router.replace('/d_admin');
+      router.replace('/d_admin//overview');
     } else if (role === UserRole.DeptUser) {
       router.replace('/d_user');
     }
@@ -102,7 +102,7 @@ export default function SignIn() {
         sx={{ p: { xs: 6, md: 10, lg: 15 } }}
       >
         <Box maxWidth={750}>
-          
+
           {/* Logo Section - Increased margin bottom */}
           <Box mb={10} display="flex" justifyContent="center" alignItems="center" gap={3}>
             <Image
@@ -123,16 +123,16 @@ export default function SignIn() {
           </Box>
 
           {/* Body Text - Increased line height and margin */}
-          <Typography 
-            paragraph 
+          <Typography
+            paragraph
             sx={{ fontSize: "1rem !important" }} // Slightly larger font
-            color="text.secondary" 
+            color="text.secondary"
             lineHeight={1.8} // More breathing room between lines
             mb={10} // Increased space before badge
           >
             This is a private, secure virtual data room (VDR) belonging to Capovex Research <br />
-            & Analytics Pvt Ltd. Access is restricted to authorized users only. All activities,<br /> 
-            file views, and downloads are monitored and logged. Unauthorized access or <br /> 
+            & Analytics Pvt Ltd. Access is restricted to authorized users only. All activities,<br />
+            file views, and downloads are monitored and logged. Unauthorized access or <br />
             misuse of this system is strictly prohibited. By logging in, <br />
             you agree to the confidentiality terms.
           </Typography>
@@ -191,27 +191,27 @@ export default function SignIn() {
             p: 25,
             borderRadius: 10,
           }}
-        > 
+        >
 <Box mb={20}>
-  <Typography 
-    py={3} 
-    variant="h1" 
-    fontWeight={700} 
-    sx={{ 
+  <Typography
+    py={3}
+    variant="h1"
+    fontWeight={700}
+    sx={{
       fontFamily: '"Public Sans", sans-serif',
       // Add responsive font sizes here
-      fontSize: { xs: '1rem', md: '1.25rem', lg: '1.65rem' } 
-    }} 
+      fontSize: { xs: '1rem', md: '1.25rem', lg: '1.65rem' }
+    }}
   >
     Sign in
   </Typography>
 
-  <Typography 
-    py={3} 
-    variant="h3"  
-    fontWeight={100} 
-    color="text.secondary" 
-    sx={{ 
+  <Typography
+    py={3}
+    variant="h3"
+    fontWeight={100}
+    color="text.secondary"
+    sx={{
       fontFamily: '"Public Sans", sans-serif',
       // Increase subtitle size
       fontSize: { xs: '0.75rem', md: '0.85rem', lg: '.95rem' }

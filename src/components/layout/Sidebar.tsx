@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import MasterAdminSidebar from './MasterAdminSidebar';
 import ViewSidebar from './ViewSidebar';
 
-// import DeptAdminSidebar from './DeptAdminSidebar';
+import DeptAdminSidebar from './DeptAdminSidebar';
 // import DeptUserSidebar from './DeptUserSidebar';
 
 export default function Sidebar() {
@@ -17,13 +17,13 @@ export default function Sidebar() {
     case 'MASTER_ADMIN':
       return <MasterAdminSidebar />;
 
-    // later you can add these
-    // case 'DEPT_ADMIN':
-    //   return <DeptAdminSidebar />;
+
+    case 'DEPT_ADMIN':
+      return <DeptAdminSidebar />;
 
     // case 'DEPT_USER':
     //   return <DeptUserSidebar />;
-     
+
     default:
       return <ViewSidebar />;
   }
