@@ -253,7 +253,7 @@ export default function DepartmentSlugPage() {
                   <Grid item xs={4}>Category Name</Grid>
                   <Grid item xs={3}>Owner</Grid>
                   <Grid item xs={2}>Files</Grid>
-                  {/*<Grid item xs={3} textAlign="right">Actions</Grid>*/}
+                  <Grid item xs={2} textAlign="right">Actions</Grid>
                 </Grid>
                 <Divider />
                 {categories.length === 0 ? (
@@ -270,9 +270,19 @@ export default function DepartmentSlugPage() {
                         </Grid>
                         <Grid item xs={3}><Typography fontSize={13} color="text.secondary">System Admin</Typography></Grid>
                         <Grid item xs={2}><Typography fontSize={13} color="text.secondary">{cat._count?.documents || 0}</Typography></Grid>
-                        <Grid item xs={3}>
+                        <Grid item xs={2.5}>
                           <Stack direction="row" spacing={1} justifyContent="flex-end">
-                           {/* <Button size="small" sx={{ textTransform: 'none' }}>Permissions</Button>*/}
+                           <Button
+  size="small"
+  sx={{ textTransform: 'none' }}
+  onClick={() =>
+    router.push(
+      `/m_admin/departments/${slug}/categories/${cat.id}`
+    )
+  }
+>
+  View Files
+</Button>
                             {/*<IconButton size="small"><MoreVertIcon fontSize="small" /></IconButton>*/}
                           </Stack>
                         </Grid>

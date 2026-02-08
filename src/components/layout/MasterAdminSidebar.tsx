@@ -26,8 +26,10 @@ import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 
 import DropdownMenu from './DropdownMenu';
+import { hr } from '@faker-js/faker';
 
 /* -------------------------------------------------------------------------- */
 /* Config                                                                     */
@@ -61,6 +63,11 @@ const SECTIONS = [
         label: 'Departments',
         href: '/m_admin/departments',
         icon: <ApartmentOutlinedIcon />,
+      },
+      {
+       label: 'User Management',
+       href: '/m_admin/users',
+       icon: <PeopleOutlinedIcon />,
       },
     ],
   },

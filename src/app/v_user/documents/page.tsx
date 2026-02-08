@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react'; 
+import { useSession } from 'next-auth/react';
 import {
   Box,
   Grid,
@@ -43,7 +43,7 @@ interface DocumentData {
   fileName: string;
   fileType: string;
   size: number;
-  updatedAt?: string; 
+  updatedAt?: string;
 }
 
 interface ChatMessage {
@@ -81,17 +81,17 @@ type ExtendedUser = {
 export default function DocumentDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession(); 
-  
+  const { data: session } = useSession();
+
   // Cast session user to our extended type
   const user = session?.user as ExtendedUser | undefined;
 
   /* ---------------- DYNAMIC HEADING LOGIC ---------------- */
   const categoryId = searchParams.get('categoryId');
   const categoryName = searchParams.get('categoryName');
-  
+
   const displayTitle = (!categoryId || searchParams.get('all') === 'true')
-    ? 'ALL DOCUMENTS' 
+    ? 'ALL DOCUMENTS'
     : (categoryName || 'DOCUMENTS').toUpperCase();
 
   /* ---------------- STATE ---------------- */
@@ -99,7 +99,7 @@ export default function DocumentDashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [loadingDocs, setLoadingDocs] = useState(true);
-  
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   /* ---------------- HELPER: GET CORRECT DEPT ID ---------------- */
@@ -140,10 +140,10 @@ export default function DocumentDashboard() {
 
     try {
         const params = new URLSearchParams();
-        
+
         // FIX 3: Use the helper to get the correct ID
         const targetId = getChatTargetId();
-        
+
         if (targetId) {
             params.append('departmentId', targetId);
         }
@@ -153,10 +153,10 @@ export default function DocumentDashboard() {
         if (viewerId) params.append('viewerUserId', viewerId);
 
         const res = await fetch(`/api/chat?${params.toString()}`);
-        
+
         if (res.ok) {
             const data: ApiMessage[] = await res.json();
-            
+
             const formattedMessages: ChatMessage[] = data.map((msg) => {
                 const isMe = msg.senderId === user.id;
                 return {
@@ -178,7 +178,7 @@ export default function DocumentDashboard() {
     if (!chatInput.trim() || !user) return;
 
     const tempContent = chatInput;
-    setChatInput(''); 
+    setChatInput('');
 
     // FIX 4: Use the helper to get the correct ID for POST as well
     const targetId = getChatTargetId();
@@ -190,14 +190,14 @@ export default function DocumentDashboard() {
             body: JSON.stringify({
                 content: tempContent,
                 departmentId: targetId, // <--- Corrected here
-                viewerUserId: searchParams.get('viewerUserId') 
+                viewerUserId: searchParams.get('viewerUserId')
             })
         });
 
         if (res.ok) {
-            fetchMessages(); 
+            fetchMessages();
         } else {
-            setChatInput(tempContent); 
+            setChatInput(tempContent);
             console.error("Failed to send");
         }
     } catch (err) {
@@ -219,17 +219,17 @@ export default function DocumentDashboard() {
   };
 
   /* ---------------- EFFECTS ---------------- */
-  
+
   useEffect(() => {
     fetchDocs();
   }, [categoryId]);
 
   useEffect(() => {
     if (!user) return;
-    
-    fetchMessages(); 
-    
-    const interval = setInterval(fetchMessages, 5000); 
+
+    fetchMessages();
+
+    const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [categoryId, session]); // Refetch if session loads or category changes
 
@@ -250,26 +250,26 @@ export default function DocumentDashboard() {
 
   return (
     <Box p={4} sx={{ backgroundColor: '#fdfdfd' }}>
-      
+
       {/* ================= HEADER ================= */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={5}>
         <Box>
-          <Typography variant="h1" fontWeight={700} color="#ff7a18" sx={{ fontSize: '2.2rem', letterSpacing: '-0.5px' }}>  
+          <Typography variant="h1" fontWeight={700} color="#ff7a18" sx={{ fontSize: '2.2rem', letterSpacing: '-0.5px' }}>
             {displayTitle}
           </Typography>
           <Box display="flex" alignItems="center" gap={4}>
              <Typography variant='h2' color="text.secondary" sx={{ fontSize: '1rem', fontWeight: 400 }}>
                View all the Files and Folders shared with you
              </Typography>
-             <Box 
-               sx={{ 
-                 bgcolor: 'rgba(255, 122, 24, 0.1)', 
-                 color: '#ff7a18', 
-                 px: 1, 
-                 py: 0.5, 
-                 borderRadius: 1, 
-                 fontSize: '0.75rem', 
-                 fontWeight: 700 
+             <Box
+               sx={{
+                 bgcolor: 'rgba(255, 122, 24, 0.1)',
+                 color: '#ff7a18',
+                 px: 1,
+                 py: 0.5,
+                 borderRadius: 1,
+                 fontSize: '0.75rem',
+                 fontWeight: 700
                }}
              >
                READ-ONLY
@@ -317,7 +317,7 @@ export default function DocumentDashboard() {
               <Divider sx={{ mb: 2 }} />
 
               <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <FolderIcon sx={{ color: '#ff7a18', mr: 1, fontSize: 20 }} /> 
+                <FolderIcon sx={{ color: '#ff7a18', mr: 1, fontSize: 20 }} />
                 / {displayTitle.toLowerCase()}
               </Typography>
 
@@ -358,7 +358,7 @@ export default function DocumentDashboard() {
                                <IconButton size="small" onClick={() => handleView(doc.documentId)}>
                                  <VisibilityIcon fontSize="small" sx={{ color: '#ff7a18' }} />
                                </IconButton>
-                               <IconButton size="small"><DownloadIcon fontSize="small" /></IconButton>
+
                                <IconButton size="small"><MoreVertIcon fontSize="small" /></IconButton>
                             </Stack>
                           </TableCell>
@@ -382,7 +382,7 @@ export default function DocumentDashboard() {
         <Grid item xs={12} md={4}>
           <Card sx={{ borderRadius: 3, height: '100%', maxHeight: 800, display: 'flex', flexDirection: 'column', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
             <CardContent sx={{ p: 4, display: 'flex', flexDirection: 'column', height: '100%' }}>
-              
+
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                  <Typography variant="h6" fontWeight={700} fontSize={16}>
                     {user?.departmentId ? "TEAM CHAT" : "SUPPORT CHAT"}
@@ -439,9 +439,9 @@ export default function DocumentDashboard() {
                  />
                  <Box display="flex" justifyContent="space-between" mt={1}>
                     <IconButton size="small"><AttachFileIcon /></IconButton>
-                    <Button 
-                      variant="contained" 
-                      size="small" 
+                    <Button
+                      variant="contained"
+                      size="small"
                       endIcon={<SendIcon />}
                       onClick={handleSendMessage}
                       disabled={!chatInput.trim()}
