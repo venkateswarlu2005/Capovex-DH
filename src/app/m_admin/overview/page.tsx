@@ -22,6 +22,7 @@ import {
   MenuItem,
   Avatar,
 } from '@mui/material';
+import { useCreateUser } from '@/hooks/m_admin/mutations/useCreateUser';
 
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
@@ -94,6 +95,19 @@ export default function MasterAdminOverviewPage() {
   const createCategory = useCreateCategory();
   const uploadDocument = useUploadDocument();
   const approveRequest = useApproveRequest();
+  const createUser = useCreateUser();
+
+  /* ---------- Create User Dialog ---------- */
+const [openUser, setOpenUser] = useState(false);
+
+const [userForm, setUserForm] = useState({
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  role: 'DEPT_USER',
+  departmentId: '',
+});
 
   /* ================= UI ================= */
 
@@ -115,6 +129,9 @@ export default function MasterAdminOverviewPage() {
           <Button startIcon={<AddOutlinedIcon />} onClick={() => setOpenCat(true)} variant="outlined">
             New Category
           </Button>
+          <Button startIcon={<AddOutlinedIcon />} onClick={() => setOpenUser(true)} variant="outlined">
+    Create User
+  </Button>
         </Stack>
       </Stack>
 
@@ -418,6 +435,95 @@ export default function MasterAdminOverviewPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* CREATE USER */}
+<Dialog open={openUser} onClose={() => setOpenUser(false)} fullWidth maxWidth="sm">
+  <DialogTitle>Create New User</DialogTitle>
+
+  <DialogContent>
+    <Stack spacing={8} mt={4}>
+      <TextField
+        label="Email"
+        fullWidth
+        value={userForm.email}
+        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+      />
+
+      <TextField
+        label="Temporary Password"
+        type="password"
+        fullWidth
+        value={userForm.password}
+        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+      />
+
+      <TextField
+        label="First Name"
+        fullWidth
+        value={userForm.firstName}
+        onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+      />
+
+      <TextField
+        label="Last Name"
+        fullWidth
+        value={userForm.lastName}
+        onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+      />
+
+      <TextField
+        select
+        label="Role"
+        fullWidth
+        value={userForm.role}
+        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+      >
+        <MenuItem value="DEPT_ADMIN">Dept Admin</MenuItem>
+        <MenuItem value="DEPT_USER">Dept User</MenuItem>
+        <MenuItem value="VIEW_ONLY_USER">Viewer</MenuItem>
+      </TextField>
+
+      <TextField
+        select
+        label="Department"
+        fullWidth
+        value={userForm.departmentId}
+        onChange={(e) =>
+          setUserForm({ ...userForm, departmentId: e.target.value })
+        }
+      >
+        {departments.map((d: any) => (
+          <MenuItem key={d.id} value={d.id}>
+            {d.name}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Stack>
+  </DialogContent>
+
+  <DialogActions>
+    <Button onClick={() => setOpenUser(false)}>Cancel</Button>
+
+    <Button
+      variant="contained"
+      disabled={createUser.isPending}
+      onClick={() => {
+        createUser.mutate(userForm);
+        setOpenUser(false);
+        setUserForm({
+          email: '',
+          password: '',
+          firstName: '',
+          lastName: '',
+          role: 'DEPT_USER',
+          departmentId: '',
+        });
+      }}
+    >
+      {createUser.isPending ? 'Creating...' : 'Create User'}
+    </Button>
+  </DialogActions>
+</Dialog>
+
     </Box>
   );
 }
