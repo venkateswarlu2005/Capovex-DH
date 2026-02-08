@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -16,16 +16,30 @@ import {
   ListItemText,
   Typography,
   Stack,
+  IconButton,
   alpha,
 } from '@mui/material';
 
 // Icons
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import DropdownMenu from './DropdownMenu';
 
+/* -------------------------------------------------------------------------- */
+/* Config                                                                     */
+/* -------------------------------------------------------------------------- */
+
 const BRAND_COLOR = '#FF5630';
+
+const EXPANDED_WIDTH = { sm: '11rem', md: '16rem', lg: '18rem' };
+const COLLAPSED_WIDTH = '4.75rem';
+
+/* -------------------------------------------------------------------------- */
+/* Component                                                                  */
+/* -------------------------------------------------------------------------- */
 
 export default function ViewSidebar() {
   const pathname = usePathname();
@@ -33,26 +47,26 @@ export default function ViewSidebar() {
   const currentCategoryId = searchParams.get('categoryId');
 
   const { data: session } = useSession();
+  const categoryAccess = (session?.user as any)?.categoryAccess ?? [];
 
-  // 🔑 Categories come from session (aligned with SignIn)
-  const categoryAccess =
-    (session?.user as any)?.categoryAccess ?? [];
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <Drawer
       variant="permanent"
       sx={{
-        width: { sm: '11rem', md: '16rem', lg: '18rem' },
+        width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
         flexShrink: 0,
 
         '& .MuiDrawer-paper': {
-          width: { sm: '11rem', md: '16rem', lg: '18rem' },
+          width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           boxSizing: 'border-box',
           borderRight: '1px solid',
           borderColor: 'divider',
           backgroundColor: '#fff',
           display: 'flex',
           flexDirection: 'column',
+          transition: 'width 0.25s ease',
         },
       }}
     >
@@ -74,50 +88,62 @@ export default function ViewSidebar() {
           style={{ objectFit: 'contain' }}
         />
 
-        <Box>
-          <Box
-            sx={{
-              fontSize: '20px',
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: '-0.8px',
-              color: '#ed7d22',
-              fontFamily: '"Inter","system-ui",sans-serif',
-            }}
-          >
-            Manthan
-          </Box>
+        {!collapsed && (
+          <Box>
+            <Box
+              sx={{
+                fontSize: '20px',
+                fontWeight: 800,
+                lineHeight: 1.05,
+                letterSpacing: '-0.8px',
+                color: '#ed7d22',
+                fontFamily: '"Inter","system-ui",sans-serif',
+              }}
+            >
+              Manthan
+            </Box>
 
-          <Box
-            sx={{
-              fontSize: '12px',
-              color: 'text.secondary',
-              fontWeight: 600,
-              mt: 0.5,
-            }}
-          >
-            VIEWER ACCESS
+            <Box
+              sx={{
+                fontSize: '12px',
+                color: 'text.secondary',
+                fontWeight: 600,
+                mt: 0.5,
+              }}
+            >
+              VIEWER ACCESS
+            </Box>
           </Box>
-        </Box>
+        )}
+
+        {/* Toggle (no impact on expanded layout) */}
+        <IconButton
+          onClick={() => setCollapsed((v) => !v)}
+          sx={{ ml: 'auto' }}
+        >
+          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </IconButton>
       </Box>
 
       {/* -------------------- MENU -------------------- */}
       <Stack spacing={3} sx={{ px: 2 }}>
         {/* ---------- PERSONAL SPACE ---------- */}
         <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              px: 4,
-              mb: 1,
-              display: 'block',
-              fontWeight: 700,
-              color: 'text.disabled',
-              textTransform: 'uppercase',
-            }}
-          >
-            Personal Space
-          </Typography>
+          {!collapsed && (
+            <Typography
+              variant="caption"
+              sx={{
+                px: 4,
+                mb: 1,
+                display: 'block',
+                fontWeight: 700,
+                color: 'text.disabled',
+                textTransform: 'uppercase',
+              }}
+            >
+              Personal Space
+            </Typography>
+          )}
 
           <List disablePadding>
             <ListItem disablePadding sx={{ mb: { sm: 1, md: 2, lg: 4 } }}>
@@ -126,11 +152,14 @@ export default function ViewSidebar() {
                 style={{ width: '100%', textDecoration: 'none' }}
               >
                 <ListItemButton
-                  selected={pathname === '/v_user/documents' && !currentCategoryId}
+                  selected={
+                    pathname === '/v_user/documents' && !currentCategoryId
+                  }
                   disableRipple
                   sx={{
-                    px: 4,
+                    px: collapsed ? 2 : 4,
                     py: { sm: 3, md: 4, lg: 6 },
+                    justifyContent: collapsed ? 'center' : 'flex-start',
                     borderLeft: 3,
                     borderLeftColor: 'transparent',
 
@@ -148,7 +177,8 @@ export default function ViewSidebar() {
                   <ListItemIcon
                     sx={{
                       minWidth: 0,
-                      pr: 2,
+                      pr: collapsed ? 0 : 2,
+                      justifyContent: 'center',
                       color:
                         pathname === '/v_user/documents' && !currentCategoryId
                           ? BRAND_COLOR
@@ -159,33 +189,35 @@ export default function ViewSidebar() {
                     <DashboardOutlinedIcon />
                   </ListItemIcon>
 
-                  <ListItemText
-                    primary="All My Files"
-                    slotProps={{
-                      primary: { variant: 'h3' },
-                    }}
-                  />
+                  {!collapsed && (
+                    <ListItemText
+                      primary="All My Files"
+                      slotProps={{ primary: { variant: 'h3' } }}
+                    />
+                  )}
                 </ListItemButton>
               </Link>
             </ListItem>
           </List>
         </Box>
 
-        {/* ---------- MY REPOSITORIES ---------- */}
+        {/* ---------- MY CATEGORIES ---------- */}
         <Box>
-          <Typography
-            variant="caption"
-            sx={{
-              px: 4,
-              mb: 1,
-              display: 'block',
-              fontWeight: 700,
-              color: 'text.disabled',
-              textTransform: 'uppercase',
-            }}
-          >
-            My Categories
-          </Typography>
+          {!collapsed && (
+            <Typography
+              variant="caption"
+              sx={{
+                px: 4,
+                mb: 1,
+                display: 'block',
+                fontWeight: 700,
+                color: 'text.disabled',
+                textTransform: 'uppercase',
+              }}
+            >
+              My Categories
+            </Typography>
+          )}
 
           <List disablePadding>
             {categoryAccess.length > 0 ? (
@@ -208,8 +240,9 @@ export default function ViewSidebar() {
                         selected={isActive}
                         disableRipple
                         sx={{
-                          px: 4,
+                          px: collapsed ? 2 : 4,
                           py: { sm: 3, md: 4, lg: 6 },
+                          justifyContent: collapsed ? 'center' : 'flex-start',
                           borderLeft: 3,
                           borderLeftColor: 'transparent',
 
@@ -227,7 +260,8 @@ export default function ViewSidebar() {
                         <ListItemIcon
                           sx={{
                             minWidth: 0,
-                            pr: 2,
+                            pr: collapsed ? 0 : 2,
+                            justifyContent: 'center',
                             color: isActive
                               ? BRAND_COLOR
                               : 'text.secondary',
@@ -239,32 +273,36 @@ export default function ViewSidebar() {
                           <FolderOpenOutlinedIcon />
                         </ListItemIcon>
 
-                        <ListItemText
-                          primary={category.name}
-                          slotProps={{
-                            primary: {
-                              variant: 'h3',
-                              noWrap: true,
-                              fontWeight: isActive ? 600 : 400,
-                            },
-                          }}
-                        />
+                        {!collapsed && (
+                          <ListItemText
+                            primary={category.name}
+                            slotProps={{
+                              primary: {
+                                variant: 'h3',
+                                noWrap: true,
+                                fontWeight: isActive ? 600 : 400,
+                              },
+                            }}
+                          />
+                        )}
                       </ListItemButton>
                     </Link>
                   </ListItem>
                 );
               })
             ) : (
-              <Typography
-                variant="body2"
-                sx={{
-                  px: 4,
-                  color: 'text.secondary',
-                  fontStyle: 'italic',
-                }}
-              >
-                No accessible repositories
-              </Typography>
+              !collapsed && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    px: 4,
+                    color: 'text.secondary',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  No accessible repositories
+                </Typography>
+              )
             )}
           </List>
         </Box>
@@ -272,7 +310,7 @@ export default function ViewSidebar() {
 
       {/* -------------------- BOTTOM DROPDOWN -------------------- */}
       <Box sx={{ mt: 'auto', px: 2, pb: 3 }}>
-        <DropdownMenu />
+        <DropdownMenu collapsed={collapsed} />
       </Box>
     </Drawer>
   );
