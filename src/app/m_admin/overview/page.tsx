@@ -175,7 +175,8 @@ const [userForm, setUserForm] = useState({
               </Stack>
 
               <Grid container spacing={3}>
-                {departments.map((dept: any) => (
+  {departments.slice(0, 9).map((dept: any) => (
+
                   <Grid item xs={12} md={4} key={dept.id}>
                     <Card variant="outlined" sx={{ borderRadius: 3 }}>
                       <CardContent>

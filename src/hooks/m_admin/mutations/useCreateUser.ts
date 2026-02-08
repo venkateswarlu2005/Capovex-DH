@@ -8,10 +8,12 @@ export const useCreateUser = () => {
     mutationFn: UserService.create,
 
     onSuccess: (_data, variables) => {
-      // Refresh users list
-      qc.invalidateQueries({ queryKey: ['m_admin', 'users'] });
 
-      // If user is attached to a department
+      qc.invalidateQueries({
+        queryKey: ['m_admin', 'users'],
+      });
+
+      // If user attached to department
       if (variables.departmentId) {
         qc.invalidateQueries({
           queryKey: ['m_admin', 'department', variables.departmentId],
