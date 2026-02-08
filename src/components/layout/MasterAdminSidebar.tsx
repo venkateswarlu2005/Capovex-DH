@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -12,8 +13,8 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  Chip,
   Stack,
+  IconButton,
   alpha,
 } from '@mui/material';
 
@@ -23,9 +24,8 @@ import Image from 'next/image';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
 import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
-import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
-import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
 import DropdownMenu from './DropdownMenu';
 
@@ -34,6 +34,9 @@ import DropdownMenu from './DropdownMenu';
 /* -------------------------------------------------------------------------- */
 
 const BRAND_COLOR = '#FF5630';
+
+const EXPANDED_WIDTH = { sm: '11rem', md: '16rem', lg: '18rem' };
+const COLLAPSED_WIDTH = '4.75rem';
 
 const SECTIONS = [
   {
@@ -59,28 +62,8 @@ const SECTIONS = [
         href: '/m_admin/departments',
         icon: <ApartmentOutlinedIcon />,
       },
-   /*   {
-        label: 'Documents',
-        href: '/admin/documents',
-        icon: <DescriptionOutlinedIcon />,
-      },*/
     ],
   },
- /* {
-    title: 'Management',
-    items: [
-      {
-        label: 'Users & Permission',
-        href: '/m_admin/users',
-        icon: <GroupOutlinedIcon />,
-      },
-      {
-        label: 'Audit Logs',
-        href: '/m_admin/audit-logs',
-        icon: <FactCheckOutlinedIcon />,
-      },
-    ],
-  },*/
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -89,24 +72,24 @@ const SECTIONS = [
 
 export default function MasterAdminSidebar() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <Drawer
       variant="permanent"
       sx={{
-        width: { sm: '11rem', md: '16rem', lg: '18rem' },
+        width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
         flexShrink: 0,
 
         '& .MuiDrawer-paper': {
-          width: { sm: '11rem', md: '16rem', lg: '18rem' },
+          width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           boxSizing: 'border-box',
           borderRight: '1px solid',
           borderColor: 'divider',
           backgroundColor: '#fff',
-
-          /* 🔑 THIS enables bottom placement */
           display: 'flex',
           flexDirection: 'column',
+          transition: 'width 0.25s ease',
         },
       }}
     >
@@ -128,50 +111,62 @@ export default function MasterAdminSidebar() {
           style={{ objectFit: 'contain' }}
         />
 
-        <Box>
-          <Box
-            sx={{
-              fontSize: '20px',
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: '-0.8px',
-              color: '#ed7d22',
-              fontFamily: '"Inter","system-ui",sans-serif',
-            }}
-          >
-            Manthan
-          </Box>
+        {!collapsed && (
+          <Box>
+            <Box
+              sx={{
+                fontSize: '20px',
+                fontWeight: 800,
+                lineHeight: 1.05,
+                letterSpacing: '-0.8px',
+                color: '#ed7d22',
+                fontFamily: '"Inter","system-ui",sans-serif',
+              }}
+            >
+              Manthan
+            </Box>
 
-          <Box
-            sx={{
-              fontSize: '14px',
-              lineHeight: 1.3,
-              color: 'text.secondary',
-              mt: 0.5,
-            }}
-          >
-            Secure Enterprise Login
+            <Box
+              sx={{
+                fontSize: '14px',
+                lineHeight: 1.3,
+                color: 'text.secondary',
+                mt: 0.5,
+              }}
+            >
+              Secure Enterprise Login
+            </Box>
           </Box>
-        </Box>
+        )}
+
+        {/* Toggle button (does NOT affect expanded layout) */}
+        <IconButton
+          onClick={() => setCollapsed((v) => !v)}
+          sx={{ ml: 'auto' }}
+        >
+          {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+        </IconButton>
       </Box>
 
       {/* -------------------- MENU -------------------- */}
       <Stack spacing={3} sx={{ px: 2 }}>
         {SECTIONS.map((section) => (
           <Box key={section.title}>
-            <Typography
-              variant="caption"
-              sx={{
-                px: 4,
-                mb: 1,
-                display: 'block',
-                fontWeight: 700,
-                color: 'text.disabled',
-                textTransform: 'uppercase',
-              }}
-            >
-              {section.title}
-            </Typography>
+            {!collapsed && (
+              <Typography
+                variant="caption"
+                sx={{
+                  px: 4,
+                  mb: 1,
+                  display: 'block',
+                  fontWeight: 700,
+                  color: 'text.disabled',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {section.title}
+              </Typography>
+            )}
 
             <List disablePadding>
               {section.items.map((item) => {
@@ -191,8 +186,9 @@ export default function MasterAdminSidebar() {
                         selected={isActive}
                         disableRipple
                         sx={{
-                          px: 4,
+                          px: collapsed ? 2 : 4,
                           py: { sm: 3, md: 4, lg: 6 },
+                          justifyContent: collapsed ? 'center' : 'flex-start',
                           borderLeft: 3,
                           borderLeftColor: 'transparent',
                           borderRadius: 0,
@@ -211,8 +207,11 @@ export default function MasterAdminSidebar() {
                         <ListItemIcon
                           sx={{
                             minWidth: 0,
-                            pr: 2,
-                            color: isActive ? '#ED7D22' : 'text.secondary',
+                            pr: collapsed ? 0 : 2,
+                            justifyContent: 'center',
+                            color: isActive
+                              ? '#ED7D22'
+                              : 'text.secondary',
 
                             '.MuiSvgIcon-root': {
                               fontSize: '1.3rem',
@@ -222,21 +221,20 @@ export default function MasterAdminSidebar() {
                           {item.icon}
                         </ListItemIcon>
 
-                        <ListItemText
-                          primary={item.label}
-                          slotProps={{
-                            primary: isActive
-                              ? { variant: 'h3', color: 'text.icon' }
-                              : {
-                                  variant: 'h3',
-                                  fontWeight: 400,
-                                  color: 'text.primary',
-                                },
-                          }}
-                        />
-
-                       
-                        
+                        {!collapsed && (
+                          <ListItemText
+                            primary={item.label}
+                            slotProps={{
+                              primary: isActive
+                                ? { variant: 'h3', color: 'text.icon' }
+                                : {
+                                    variant: 'h3',
+                                    fontWeight: 400,
+                                    color: 'text.primary',
+                                  },
+                            }}
+                          />
+                        )}
                       </ListItemButton>
                     </Link>
                   </ListItem>
@@ -250,12 +248,12 @@ export default function MasterAdminSidebar() {
       {/* -------------------- BOTTOM DROPDOWN -------------------- */}
       <Box
         sx={{
-          mt: 'auto', // 🔥 pushes to bottom
+          mt: 'auto',
           px: 2,
           pb: 3,
         }}
       >
-        <DropdownMenu />
+        <DropdownMenu collapsed={collapsed} />
       </Box>
     </Drawer>
   );
