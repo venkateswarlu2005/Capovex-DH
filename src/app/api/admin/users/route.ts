@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
+
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/lib/authOptions';
-import { UserRole } from '@/shared/enums';
+import { UserRole, UserStatus, AuthProvider } from '@/shared/enums';
 
 /* ================================
-   1. LIST USERS
+   1. LIST USERS (GET)
    ================================ */
 export async function GET(request: Request) {
   try {
@@ -56,8 +59,70 @@ export async function GET(request: Request) {
 }
 
 /* ================================
-   2. UPDATE USER ROLE / DEPARTMENT
-   (MASTER ADMIN ONLY)
+   2. CREATE USER (POST)
+   (Master Admin Only)
+   ================================ */
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    // 🔒 Security: Only Master Admin can create users directly
+    if (!session || session.user.role !== UserRole.MasterAdmin) {
+      return new NextResponse('Unauthorized', { status: 403 });
+    }
+
+    const body = await request.json();
+    const { email, firstName, lastName, password, role, departmentId } = body;
+
+    // Validation
+    if (!email || !password || !firstName) {
+      return new NextResponse('Missing required fields', { status: 400 });
+    }
+
+    // Check if email exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return new NextResponse('User already exists', { status: 409 });
+    }
+
+    // Hash Password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Map legacy 'VIEW_ONLY' string to correct Enum if necessary
+    const finalRole = role === 'VIEW_ONLY' ? UserRole.ViewOnlyUser : role;
+
+    // Create User
+    const newUser = await prisma.user.create({
+      data: {
+        userId: randomUUID().replace(/-/g, ''), // Legacy ID format
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName: lastName || '',
+        role: finalRole || UserRole.ViewOnlyUser,
+        departmentId: departmentId || null,
+        status: UserStatus.Active, // Auto-activate since Admin created them
+        authProvider: AuthProvider.Credentials,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+      }
+    });
+
+    return NextResponse.json(newUser);
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return new NextResponse('Internal Error', { status: 500 });
+  }
+}
+
+/* ================================
+   3. UPDATE USER ROLE / DEPT (PUT)
+   (Master Admin Only)
    ================================ */
 export async function PUT(request: Request) {
   try {
@@ -80,21 +145,23 @@ export async function PUT(request: Request) {
       });
     }
 
-    // ✅ Allow UI role VIEW_ONLY but map it safely
+    // ✅ FIXED: Included UserRole.ViewOnlyUser and handled mapping
     const allowedRoles = [
       UserRole.MasterAdmin,
       UserRole.DeptAdmin,
       UserRole.DeptUser,
-      'VIEW_ONLY',
+      UserRole.ViewOnlyUser,
+      'VIEW_ONLY', // for backward compatibility with frontend
     ];
 
     if (!allowedRoles.includes(role)) {
       return new NextResponse('Invalid role value', { status: 400 });
     }
 
-    // ✅ OPTION 2: Map VIEW_ONLY → DEPT_USER for Prisma
+    // ✅ FIXED: Map 'VIEW_ONLY' to the correct Prisma Enum 'VIEW_ONLY_USER'
+    // If the role is already valid (e.g. 'DEPT_ADMIN'), use it as is.
     const prismaRole =
-      role === 'VIEW_ONLY' ? UserRole.DeptUser : role;
+      role === 'VIEW_ONLY' ? UserRole.ViewOnlyUser : role;
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

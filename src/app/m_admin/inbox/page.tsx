@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+
 import {
   Box,
   List,
@@ -12,9 +13,20 @@ import {
   Avatar,
   TextField,
   IconButton,
-  Paper
+  Paper,
 } from '@mui/material';
+
 import SendIcon from '@mui/icons-material/Send';
+
+/* ================= HOOKS ================= */
+
+import {
+  useChatChannels,
+  useChatMessages,
+} from '@/hooks/m_admin/queries/useChat';
+import { useSendMessage } from '@/hooks/m_admin/mutations/useSendMessage';
+
+
 
 /* ================= TYPES ================= */
 
@@ -30,7 +42,7 @@ type Channel = {
 type Message = {
   id: string;
   content: string;
-  senderId: string; // IMPORTANT
+  senderId: string;
   sender: {
     firstName: string;
     lastName: string;
@@ -39,74 +51,57 @@ type Message = {
   createdAt?: string;
 };
 
-/* ================= COMPONENT ================= */
+/* ================= PAGE ================= */
 
 export default function AdminChatPage() {
   const { data: session } = useSession();
   const myUserId = session?.user?.id;
 
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  /* ========== LOAD INBOX ========== */
-  useEffect(() => {
-    fetch('/api/chat/channels')
-      .then(res => res.json())
-      .then(setChannels);
-  }, []);
+  /* ================= QUERIES ================= */
 
-  /* ========== LOAD MESSAGES ========== */
-  useEffect(() => {
-    if (!activeChannel) return;
+  const { data: channels = [] } = useChatChannels();
 
-    const params = new URLSearchParams({
-      departmentId: activeChannel.departmentId
-    });
+  const messageParams = activeChannel
+    ? (() => {
+        const params = new URLSearchParams({
+          departmentId: activeChannel.departmentId,
+        });
+        if (activeChannel.viewerUserId) {
+          params.append('viewerUserId', activeChannel.viewerUserId);
+        }
+        return params;
+      })()
+    : undefined;
 
-    if (activeChannel.viewerUserId) {
-      params.append('viewerUserId', activeChannel.viewerUserId);
-    }
+  const { data: messages = [] } = useChatMessages(messageParams);
 
-    fetch(`/api/chat?${params}`)
-      .then(res => res.json())
-      .then(setMessages);
-  }, [activeChannel]);
+  /* ================= MUTATION ================= */
 
-  /* ========== AUTO SCROLL ========== */
+  const sendMessageMutation = useSendMessage();
+
+  /* ================= AUTO SCROLL ================= */
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /* ========== SEND MESSAGE ========== */
-  const sendMessage = async () => {
+  /* ================= SEND MESSAGE ================= */
+
+  const sendMessage = () => {
     if (!input.trim() || !activeChannel) return;
 
-    const content = input;
+    sendMessageMutation.mutate({
+      content: input,
+      departmentId: activeChannel.departmentId,
+      viewerUserId: activeChannel.viewerUserId,
+    });
+
     setInput('');
-
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content,
-        departmentId: activeChannel.departmentId,
-        viewerUserId: activeChannel.viewerUserId
-      })
-    });
-
-    const params = new URLSearchParams({
-      departmentId: activeChannel.departmentId
-    });
-    if (activeChannel.viewerUserId) {
-      params.append('viewerUserId', activeChannel.viewerUserId);
-    }
-
-    const res = await fetch(`/api/chat?${params}`);
-    setMessages(await res.json());
   };
 
   /* ================= RENDER ================= */
@@ -120,8 +115,9 @@ export default function AdminChatPage() {
           Inbox
         </Typography>
         <Divider />
+
         <List disablePadding>
-          {channels.map(ch => (
+          {channels.map((ch: Channel) => (
             <ListItemButton
               key={ch.id}
               selected={activeChannel?.id === ch.id}
@@ -173,7 +169,7 @@ export default function AdminChatPage() {
                   </Typography>
                 </Box>
               ) : (
-                messages.map(msg => {
+                messages.map((msg: Message) => {
                   const isMe = msg.senderId === myUserId;
 
                   return (
@@ -184,7 +180,6 @@ export default function AdminChatPage() {
                       mb={2}
                       gap={1}
                     >
-                      {/* Avatar only for OTHER user */}
                       {!isMe && (
                         <Avatar
                           src={msg.sender.avatarUrl}
@@ -202,19 +197,19 @@ export default function AdminChatPage() {
                             py: 1.2,
                             borderRadius: 2,
                             bgcolor: isMe ? '#dcf8c6' : '#ffffff',
-                            border: '1px solid #e0e0e0'
+                            border: '1px solid #e0e0e0',
                           }}
                         >
                           {!isMe && (
                             <Typography
-                              variant='h2'
+                              variant="h2"
                               fontWeight={600}
                               color="text.secondary"
                             >
                               {msg.sender.firstName}
                             </Typography>
                           )}
-                          <Typography variant='h2'>
+                          <Typography variant="h2">
                             {msg.content}
                           </Typography>
                         </Paper>
@@ -234,8 +229,8 @@ export default function AdminChatPage() {
                 rows={2}
                 placeholder="Type a message…"
                 value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => {
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
@@ -244,8 +239,8 @@ export default function AdminChatPage() {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
-                    bgcolor: '#f9f9f9'
-                  }
+                    bgcolor: '#f9f9f9',
+                  },
                 }}
               />
 
@@ -256,7 +251,7 @@ export default function AdminChatPage() {
                   sx={{
                     bgcolor: '#ff7a18',
                     color: '#fff',
-                    '&:hover': { bgcolor: '#e56a10' }
+                    '&:hover': { bgcolor: '#e56a10' },
                   }}
                 >
                   <SendIcon />

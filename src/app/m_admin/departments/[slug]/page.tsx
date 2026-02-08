@@ -65,14 +65,14 @@ const mapRoleToDisplay = (dbRole: string) => {
 
 export default function DepartmentSlugPage() {
   const params = useParams();
-  const router = useRouter();   
+  const router = useRouter();
   const slug = params?.slug ? String(params.slug) : '';
 
   const [isLoading, setIsLoading] = useState(true);
   const [currentDept, setCurrentDept] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]); 
+  const [users, setUsers] = useState<any[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -116,7 +116,7 @@ export default function DepartmentSlugPage() {
             status: u.status || 'Active',
           })));
         }
-        
+
       } catch (error) {
         console.error('Failed to fetch department data', error);
       } finally {
@@ -151,12 +151,12 @@ export default function DepartmentSlugPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedUser.id,
-          role: selectedUser.dbRole, 
+          role: selectedUser.dbRole,
           departmentId: currentDept?.id
         }),
       });
       if (res.ok) {
-        setUsers(prev => prev.map(u => 
+        setUsers(prev => prev.map(u =>
           u.id === selectedUser.id ? { ...u, dbRole: selectedUser.dbRole, role: mapRoleToDisplay(selectedUser.dbRole) } : u
         ));
         setIsEditOpen(false);
@@ -169,7 +169,7 @@ export default function DepartmentSlugPage() {
   const departmentName = currentDept ? currentDept.name : slug.toUpperCase();
   const departmentDesc = currentDept ? `Manage categories and permissions for ${currentDept.name}` : 'Loading...';
   const totalCategories = categories.length;
-  
+
   const statsData = [
     { label: 'TOTAL CATEGORIES', value: totalCategories.toString(), sub: 'Active substructures', type: 'folder' },
     { label: 'TOTAL DEPT USERS', value: users.length.toString(), sub: 'All Active', type: 'users' },
